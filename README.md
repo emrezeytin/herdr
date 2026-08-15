@@ -24,6 +24,26 @@
 
 ---
 
+# sessionr
+
+**sessionr** is a fork of [herdr](https://github.com/herdrdev/herdr) with one product change: the sidebar is session-first.
+
+- **session-first sidebar** — each row is a session: a named unit of work with a goal, a git worktree, and the agents inside it. A focused card pins the active session; the rest sort by recency and collapse settled work into an archive.
+- **session CLI** — `sessionr session create|goal|settle|unsettle|list|focus` manage sessions. `sessionr instance` runs a named background server session (`--session` stays as an alias).
+- **update checks off by default** — upstream update checks point at herdr.dev and would offer herdr releases, so sessionr leaves them off unless you opt in.
+
+Build with the older CommandLineTools SDK (zig 0.15.2 pins libghostty-vt):
+
+```bash
+export DEVELOPER_DIR=/Library/Developer/CommandLineTools
+export ZIG=$HOME/.local/share/mise/installs/zig/0.15.2/bin/zig
+cargo build
+```
+
+See [DESIGN.md](./DESIGN.md) for the product and sidebar spec, and [DEVFORK.md](./DEVFORK.md) for fork dev notes.
+
+---
+
 https://github.com/user-attachments/assets/043ec09f-4bdd-41d5-aee0-8fda6b83e267
 
 **the runtime your coding agents live on.**

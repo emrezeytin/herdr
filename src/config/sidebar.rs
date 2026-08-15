@@ -407,9 +407,14 @@ impl Default for AgentsSidebarConfig {
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(default)]
 pub struct SpacesSidebarConfig {
+    /// Legacy row layout, retained for backward compatibility. The sessionr
+    /// sidebar renders sessions from session state and ignores these rows.
     #[serde(deserialize_with = "deserialize_sidebar_rows")]
     pub rows: SpaceSidebarRows,
     pub row_gap: u16,
+    /// Number of settled rows shown when the Settled section is collapsed.
+    /// Default: 3.
+    pub settled_preview: usize,
 }
 
 impl Default for SpacesSidebarConfig {
@@ -420,6 +425,7 @@ impl Default for SpacesSidebarConfig {
                 vec![SpaceSidebarToken::Branch, SpaceSidebarToken::GitStatus],
             ],
             row_gap: DEFAULT_SIDEBAR_ROW_GAP,
+            settled_preview: 3,
         }
     }
 }
@@ -428,6 +434,10 @@ impl Default for SpacesSidebarConfig {
 #[serde(default)]
 pub struct SidebarConfig {
     pub agents: AgentsSidebarConfig,
+    /// sessionr renames the user-facing `[ui.sidebar.spaces]` section to
+    /// `[ui.sidebar.sessions]`. The old `spaces` key is accepted as a silent
+    /// legacy alias.
+    #[serde(rename = "sessions", alias = "spaces")]
     pub spaces: SpacesSidebarConfig,
 }
 
@@ -459,6 +469,32 @@ mod tests {
             ]
         );
         assert_eq!(config.spaces.row_gap, 0);
+        assert_eq!(config.spaces.settled_preview, 3);
+    }
+
+    #[test]
+    fn sessions_section_parses_settled_preview_and_keeps_spaces_alias() {
+        let config: crate::config::Config = toml::from_str(
+            r#"
+[ui.sidebar.sessions]
+row_gap = 2
+settled_preview = 5
+"#,
+        )
+        .expect("sessions section");
+        assert_eq!(config.ui.sidebar.spaces.row_gap, 2);
+        assert_eq!(config.ui.sidebar.spaces.settled_preview, 5);
+
+        let legacy: crate::config::Config = toml::from_str(
+            r#"
+[ui.sidebar.spaces]
+row_gap = 4
+settled_preview = 7
+"#,
+        )
+        .expect("legacy spaces section");
+        assert_eq!(legacy.ui.sidebar.spaces.row_gap, 4);
+        assert_eq!(legacy.ui.sidebar.spaces.settled_preview, 7);
     }
 
     #[test]

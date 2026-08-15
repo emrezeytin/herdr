@@ -366,26 +366,14 @@ const DEFAULT_CONFIG: &str = r##"# sessionr configuration
 # distinct static glyphs for blocked, working, done, idle, and unknown states.
 # status_indicators = "dots"
 
-# Expanded agent rows. Built-ins are state_icon, state_text, workspace, tab, pane, agent,
-# terminal_title, and terminal_title_stripped.
-# Custom values reported through pane metadata use a $name token.
-# A token occurrence may be styled with { token = "workspace", fg = "#89b4fa", bold = true, dim = false }.
-# Omitted style fields preserve the contextual default.
-# [ui.sidebar.agents]
-# Blank rows between agent entries. Set to 1 to restore the previous spacing.
+# sessionr renders the session sidebar from session state, not from row layout config.
+# The legacy ui.sidebar.agents and ui.sidebar.spaces row configs are still parsed
+# for backward compatibility but are unused by sessionr.
+# [ui.sidebar.sessions]
+# Blank rows between session rows. Set to 1 to restore the previous spacing.
 # row_gap = 0
-# rows = [["state_icon", "workspace", "tab"], ["agent"]]
-# Optional canonical agent IDs replace the default rows for matching agents.
-# [ui.sidebar.agents.rows_by_agent]
-# claude = [["state_icon", "workspace", "tab"], ["terminal_title_stripped"], ["agent"]]
-
-# Expanded space rows. Built-ins are state_icon, state_text, workspace, branch, and git_status.
-# Custom values reported through workspace metadata use a $name token, for example $jj_status.
-# Inline token styles accept strict #RGB/#RRGGBB foregrounds plus bold and dim booleans.
-# [ui.sidebar.spaces]
-# Blank rows between space entries. Set to 1 to restore the previous spacing.
-# row_gap = 0
-# rows = [["state_icon", "workspace"], ["branch", "git_status"]]
+# Number of settled (archived) rows shown when the Settled section is collapsed.
+# settled_preview = 3
 
 # Accent color for highlights, borders, and navigation UI.
 # Accepts: hex (#89b4fa), named colors (cyan, blue, magenta), or rgb(r,g,b)
@@ -474,7 +462,7 @@ pane_history = false
 "##;
 
 // Bundled at build time so the printed skill always matches this binary's release.
-const SKILL: &str = include_str!("../skills/herdr/SKILL.md");
+const SKILL: &str = include_str!("../skills/sessionr/SKILL.md");
 
 fn should_block_nested(config: &config::Config) -> bool {
     should_block_nested_for_env(config, std::env::var(HERDR_ENV_VAR).ok().as_deref())

@@ -280,7 +280,7 @@ pub(crate) fn workspace_list_entries_expanded(app: &AppState) -> Vec<WorkspaceLi
 
 fn workspace_list_entries_inner(app: &AppState, force_expanded: bool) -> Vec<WorkspaceListEntry> {
     let _ = force_expanded;
-    const SETTLED_PREVIEW: usize = 3;
+    let settled_preview = app.sidebar_spaces.settled_preview;
 
     let mut active = Vec::new();
     let mut settled = Vec::new();
@@ -306,9 +306,9 @@ fn workspace_list_entries_inner(app: &AppState, force_expanded: bool) -> Vec<Wor
     );
     if !settled.is_empty() {
         entries.push(WorkspaceListEntry::SettledHeader);
-        let collapsed = !app.settled_expanded && settled.len() > SETTLED_PREVIEW;
+        let collapsed = !app.settled_expanded && settled.len() > settled_preview;
         let visible = if collapsed {
-            SETTLED_PREVIEW
+            settled_preview
         } else {
             settled.len()
         };
@@ -1149,7 +1149,7 @@ fn render_focused_card(
                     .iter()
                     .filter(|ws| ws.is_settled())
                     .count();
-                let hidden = settled_count.saturating_sub(3);
+                let hidden = settled_count.saturating_sub(app.sidebar_spaces.settled_preview);
                 frame.render_widget(
                     Paragraph::new(Line::from(vec![Span::styled(
                         format!(" + Show {hidden} more"),
@@ -1314,6 +1314,8 @@ mod tests {
             ("s4", Some(10), Some(20)),
             ("s5", Some(10), Some(10)),
         ]);
+        // Default settled_preview collapses to 3 preview rows.
+        assert_eq!(state.sidebar_spaces.settled_preview, 3);
         let entries = workspace_list_entries(&state);
         assert_eq!(entries[0], WorkspaceListEntry::Workspace { ws_idx: 0, indented: false });
         assert_eq!(entries[1], WorkspaceListEntry::SettledHeader);
@@ -1335,6 +1337,39 @@ mod tests {
             6
         );
         assert_eq!(entries.len(), 7);
+    }
+
+    #[test]
+    fn settled_preview_is_read_from_config() {
+        let mut state = session_app(&[
+            ("active", Some(100), None),
+            ("s1", Some(10), Some(50)),
+            ("s2", Some(10), Some(40)),
+            ("s3", Some(10), Some(30)),
+            ("s4", Some(10), Some(20)),
+            ("s5", Some(10), Some(10)),
+        ]);
+        state.sidebar_spaces.settled_preview = 2;
+
+        let entries = workspace_list_entries(&state);
+        assert_eq!(entries[0], WorkspaceListEntry::Workspace { ws_idx: 0, indented: false });
+        assert_eq!(entries[1], WorkspaceListEntry::SettledHeader);
+        assert_eq!(entries[2], WorkspaceListEntry::Workspace { ws_idx: 1, indented: false });
+        assert_eq!(entries[3], WorkspaceListEntry::Workspace { ws_idx: 2, indented: false });
+        assert_eq!(entries[4], WorkspaceListEntry::SettledShowMore);
+        assert_eq!(entries.len(), 5);
+
+        // A preview at least as large as the settled count never collapses.
+        state.sidebar_spaces.settled_preview = 10;
+        let entries = workspace_list_entries(&state);
+        assert!(!entries.contains(&WorkspaceListEntry::SettledShowMore));
+        assert_eq!(
+            entries
+                .iter()
+                .filter(|entry| matches!(entry, WorkspaceListEntry::Workspace { .. }))
+                .count(),
+            6
+        );
     }
 
     #[test]

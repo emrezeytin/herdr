@@ -296,6 +296,18 @@
           "description": "Close the selected workspace."
         },
         {
+          "key": "keys.settle_session",
+          "type": "keybinding",
+          "default": "\"prefix+a\"",
+          "description": "Settle (archive) the selected session."
+        },
+        {
+          "key": "keys.set_goal",
+          "type": "keybinding",
+          "default": "\"prefix+u\"",
+          "description": "Edit the selected session's goal."
+        },
+        {
           "key": "keys.workspace_picker",
           "type": "keybinding",
           "default": "\"prefix+w\"",
@@ -828,16 +840,22 @@
           "description": "Complete Agent-row overrides keyed by strict canonical agent id. Agents without an override use ui.sidebar.agents.rows."
         },
         {
-          "key": "ui.sidebar.spaces.row_gap",
+          "key": "ui.sidebar.sessions.row_gap",
           "type": "integer",
           "default": "0",
-          "description": "Blank terminal rows between worktree groups and unrelated top-level Spaces. Worktree parents and their indented children remain packed."
+          "description": "Blank terminal rows between session rows. Set to 1 to restore the previous spacing."
         },
         {
-          "key": "ui.sidebar.spaces.rows",
+          "key": "ui.sidebar.sessions.rows",
           "type": "list of token rows",
           "default": "[[\"state_icon\", \"workspace\"], [\"branch\", \"git_status\"]]",
-          "description": "Expanded Space sidebar layout. Entries may be token strings or inline { token, fg, bold, dim } style tables. Supports built-in and $name metadata tokens; at most 16 rows and 16 tokens per row."
+          "description": "Legacy session row layout retained for backward compatibility. The sessionr sidebar renders sessions from session state; this list is parsed but unused."
+        },
+        {
+          "key": "ui.sidebar.sessions.settled_preview",
+          "type": "integer",
+          "default": "3",
+          "description": "Number of settled sessions shown when the Settled section is collapsed. Remaining settled sessions hide behind \"Show N more\"."
         },
         {
           "key": "ui.accent",
