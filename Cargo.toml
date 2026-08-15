@@ -1,12 +1,12 @@
 [package]
-name = "herdr"
+name = "sessionr"
 version = "0.8.0"
 edition = "2021"
 build = "build.rs"
-description = "terminal workspace manager for AI coding agents"
+description = "session-first terminal multiplexer for AI coding agents"
 license = "Apache-2.0"
-repository = "https://github.com/herdrdev/herdr"
-homepage = "https://herdr.dev"
+repository = "https://github.com/emrezeytin/herdr"
+homepage = "https://github.com/emrezeytin/herdr"
 keywords = ["terminal", "tui", "ai", "agents", "multiplexer"]
 categories = ["command-line-utilities"]
 include = [
