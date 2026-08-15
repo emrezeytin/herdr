@@ -10,11 +10,6 @@ Sessions = tasks. Worktrees = isolation. Agents = workers. One repo, N parallel 
 
 ```
 ┌────────────────────────────┐
-│  Fix billing bug           │  ← focused session card (pinned)
-│  ⎇ worktree/calm-river     │     goal: up to 2 lines, bold
-│  claude ⚙  codex ✓         │     branch chip, dim
-│                            │     agent chips: kind + state
-├────────────────────────────┤
 │ ⟳ Prototype landing…  now  │  ← session: name first line,
 │   ⎇ main     kutas-website │     mark + goal + time
 │ ● Smaller campaign…    2h  │  ← branch + repo on second
@@ -31,7 +26,7 @@ Sessions = tasks. Worktrees = isolation. Agents = workers. One repo, N parallel 
 
 Rules:
 
-- **Focused session** renders as a card at the top. One focused card, then the rest of the list (active sessions + settled). Chips on the card show each detected agent: kind + state icon.
+- **Focused session** keeps its row highlight in the list (no separate card; the card was dropped in favor of a plain list).
 - **Session row** = session name on the first line (gutter state mark + goal + right-aligned relative time; goal wraps 2 lines), branch line second (`⎇` + worktree branch, `main` when no worktree) with the repo name right-aligned on the same line. No group headers, no avatars — the session name leads.
 - **Gutter mark** = rolled-up agent state: `⟳` working, `●` blocked, `✓` done, `·` idle/plain shell, dim dot = no agents.
 - **Repo** = the session's git space (herdr's worktree-space metadata), shown dim on the branch line. Sorting is recency desc overall; same-repo sessions need no contiguity.
@@ -72,7 +67,7 @@ Creation: `sessionr session create --goal "fix billing bug" [--cwd X] [--worktre
 
 ### 2. Sidebar — `src/ui/sidebar.rs`
 - Delete the two-section split (`render_workspace_list` + `render_agent_detail`, `sidebar_section_heights`).
-- New renderers: `render_focused_card`, `render_session_row` (mark + name + branch + repo + time), `render_settled_section` (+ show-more collapse).
+- New renderers: `render_session_row` (mark + name + branch + repo + time), `render_settled_section` (+ show-more collapse).
 - Reuse: token machinery (`tokens.rs`), `state_icon`, scrollbar, truncation utils.
 - New utils: relative-time formatting.
 - Input — `src/app/input/sidebar.rs`: navigation moves over sessions; add `settle`/`unsettle` keys, goal edit prompt.

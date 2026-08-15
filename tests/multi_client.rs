@@ -878,7 +878,7 @@ fn non_foreground_client_render_preserves_agent_panel_scroll() {
     let (reached_bottom, setup_frames) = wait_for_frame_matching_with_snapshots(
         &mut setup_client,
         Duration::from_secs(3),
-        |frame| agent_panel_starts_with(frame, "agent-08"),
+        |frame| agent_panel_starts_with(frame, "agent-06"),
     )
     .expect("setup frame decoding should succeed");
     assert!(

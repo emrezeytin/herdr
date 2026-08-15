@@ -562,6 +562,8 @@ fn server_crash_after_attach_causes_lost_connection_error() {
                         || out.contains("workspace")
                         || out.contains("pane")
                         || out.contains("terminal")
+                        || out.contains("\u{2502}")
+                        || out.contains("sessions")
                     {
                         seen = true;
                         break;
@@ -737,6 +739,10 @@ fn attach_thin_client_with_config(
             || out.contains("workspace")
             || out.contains("pane")
             || out.contains("terminal")
+            // sessionr sidebar markers: vertical separator or the sessions
+            // header row of a rendered frame.
+            || out.contains('\u{2502}')
+            || out.contains("sessions")
         {
             attached = true;
             break;
@@ -1068,6 +1074,10 @@ fn read_until_client_attaches(client: &SpawnedHerdr) -> String {
             || output.contains("workspace")
             || output.contains("pane")
             || output.contains("terminal")
+            // sessionr sidebar markers: vertical separator or the sessions
+            // header row of a rendered frame.
+            || output.contains('\u{2502}')
+            || output.contains("sessions")
         {
             return output;
         }

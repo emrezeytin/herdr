@@ -1,14 +1,14 @@
 mod tokens;
 
 use ratatui::{
-    layout::{Alignment, Margin, Rect},
+    layout::{Alignment, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Paragraph},
+    widgets::Paragraph,
     Frame,
 };
 
-use self::tokens::{ResolvedToken, ResolvedTokenKind};
+use self::tokens::ResolvedToken;
 use super::scrollbar::{render_scrollbar, should_show_scrollbar};
 use super::status::{state_icon, state_label};
 use super::text::{display_width, display_width_u16, truncate_end};
@@ -172,26 +172,6 @@ fn workspace_row_height_in_body(
 ) -> u16 {
     SESSION_ROW_HEIGHT.min(body_height)
 }
-
-/// Height of the pinned focused-session card: two border rows plus goal
-/// row, branch row, and an agent chips row when the session has agents.
-fn focused_card_height(app: &AppState) -> u16 {
-    let Some(focused) = app.active.or(Some(app.selected)) else {
-        return 0;
-    };
-    let Some(ws) = app.workspaces.get(focused) else {
-        return 0;
-    };
-    if ws.is_settled() {
-        return 0;
-    }
-    let has_agents = app
-        .terminals
-        .values()
-        .any(|terminal| terminal.agent_name.is_some());
-    if has_agents { 5 } else { 4 }
-}
-
 fn workspace_entry_gap(app: &AppState, entries: &[WorkspaceListEntry], entry_idx: usize) -> u16 {
     if entry_idx + 1 < entries.len() && !next_entry_is_indented_workspace(entries, entry_idx) {
         app.sidebar_spaces.row_gap
@@ -335,7 +315,7 @@ pub(crate) fn workspace_list_rect(area: Rect, split_ratio: f32) -> Rect {
 }
 
 pub(crate) fn workspace_list_body_rect(
-    app: &AppState,
+    _app: &AppState,
     area: Rect,
     has_scrollbar: bool,
 ) -> Rect {
@@ -343,10 +323,7 @@ pub(crate) fn workspace_list_body_rect(
         return Rect::default();
     }
 
-    let body_y = area
-        .y
-        .saturating_add(WORKSPACE_SECTION_HEADER_ROWS)
-        .saturating_add(focused_card_height(app));
+    let body_y = area.y.saturating_add(WORKSPACE_SECTION_HEADER_ROWS);
     let footer_y = area.y + area.height.saturating_sub(1);
     let body_height = footer_y.saturating_sub(body_y);
     let body_width = area.width.saturating_sub(u16::from(has_scrollbar));
@@ -894,98 +871,7 @@ pub(super) fn render_sidebar(
     render_workspace_list(app, terminal_runtimes, frame, ws_area, is_navigating);
     render_sidebar_toggle(app, frame, area, false, p);
 }
-
-fn render_focused_card(
-    app: &AppState,
-    terminal_runtimes: &TerminalRuntimeRegistry,
-    frame: &mut Frame,
-    area: Rect,
-) {
-    let height = focused_card_height(app);
-    if height == 0 || area.height < 2 + height {
-        return;
-    }
-    let p = &app.palette;
-    let card_area = Rect::new(area.x, area.y + WORKSPACE_SECTION_HEADER_ROWS, area.width, height);
-
-    let focused = app.active.or(Some(app.selected)).unwrap_or(0);
-    let Some(ws) = app.workspaces.get(focused) else {
-        return;
-    };
-    if ws.is_settled() {
-        return;
-    }
-
-    frame.render_widget(
-        Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(p.surface1)),
-        card_area,
-    );
-    let inner = card_area.inner(Margin {
-        horizontal: 1,
-        vertical: 1,
-    });
-    if inner.width == 0 || inner.height == 0 {
-        return;
-    }
-
-    let title = ws
-        .goal
-        .clone()
-        .unwrap_or_else(|| ws.display_name_from(&app.terminals, terminal_runtimes));
-    frame.render_widget(
-        Paragraph::new(Line::from(vec![Span::styled(
-            truncate_end(&title, inner.width as usize),
-            Style::default().fg(p.text).add_modifier(Modifier::BOLD),
-        )])),
-        Rect::new(inner.x, inner.y, inner.width, 1),
-    );
-
-    let branch = ws
-        .branch()
-        .map(|branch| format!("⎇ {branch}"))
-        .unwrap_or_else(|| "⎇ no branch".to_string());
-    frame.render_widget(
-        Paragraph::new(Line::from(vec![Span::styled(
-            truncate_end(&branch, inner.width as usize),
-            Style::default().fg(p.subtext0),
-        )])),
-        Rect::new(inner.x, inner.y + 1, inner.width, 1),
-    );
-
-    if inner.height >= 3 {
-        let mut chips = Vec::new();
-        for entry in agent_panel_entries_from(app, terminal_runtimes) {
-            if entry.ws_idx != focused {
-                continue;
-            }
-            let kind = entry
-                .agent_kind_label
-                .clone()
-                .or(entry.agent_label.clone())
-                .unwrap_or_else(|| "agent".to_string());
-            let (icon, style) = state_icon(entry.state, entry.seen, app.status_indicators, p);
-            chips.push(Span::styled(
-                format!("{icon} {kind}"),
-                Style::default().fg(p.subtext0),
-            ));
-            chips.push(Span::styled(
-                format!(" {} ", state_label(entry.state, entry.seen)),
-                style,
-            ));
-            if chips.len() >= 6 {
-                break;
-            }
-        }
-        if !chips.is_empty() {
-            frame.render_widget(
-                Paragraph::new(Line::from(chips)),
-                Rect::new(inner.x, inner.y + 2, inner.width, 1),
-            );
-        }
-    }
-}fn render_workspace_list(
+fn render_workspace_list(
     app: &AppState,
     terminal_runtimes: &TerminalRuntimeRegistry,
     frame: &mut Frame,
@@ -1004,8 +890,6 @@ fn render_focused_card(
             Rect::new(area.x, area.y, area.width, 1),
         );
     }
-
-    render_focused_card(app, terminal_runtimes, frame, area);
 
     let metrics = workspace_list_scroll_metrics(app, area);
     let scrollbar_rect = workspace_list_scrollbar_rect(app, area);
@@ -1397,10 +1281,10 @@ mod tests {
             .expect("sidebar should render");
         let buffer = terminal.backend().buffer();
 
-        let line1 = row_text(buffer, 6, area.width);
+        let line1 = row_text(buffer, 2, area.width);
         assert!(line1.contains("fix billing bug"), "line1: {line1}");
         assert!(line1.contains("2m"), "line1: {line1}");
-        let line2 = row_text(buffer, 7, area.width);
+        let line2 = row_text(buffer, 3, area.width);
         assert!(line2.contains("⎇ main"), "line2: {line2}");
         assert!(line2.contains("repo-work"), "line2: {line2}");
     }
@@ -1428,36 +1312,7 @@ mod tests {
         assert!(row.contains("finished task"), "row: {row}");
     }
 
-    #[test]
-    fn focused_card_renders_goal_branch_and_agent_chips() {
-        let mut state = session_app(&[("cardy", Some(now_unix_secs()), None)]);
-        state.workspaces[0].goal = Some("refund idempotency".into());
-        state.workspaces[0].cached_git_branch = Some("worktree/fix-refunds".into());
-        state.active = Some(0);
-        state.mode = Mode::Terminal;
-        state.ensure_test_terminals();
-        if let Some(terminal) = state.terminals.values_mut().next() {
-            terminal.agent_name = Some("claude".to_string());
-            terminal.detected_agent = Some(Agent::Claude);
-        }
-
-        let area = Rect::new(0, 0, 36, 16);
-        let mut terminal = Terminal::new(TestBackend::new(area.width, area.height))
-            .expect("test terminal should initialize");
-        terminal
-            .draw(|frame| render_sidebar(&state, &TerminalRuntimeRegistry::default(), frame, area))
-            .expect("sidebar should render");
-        let buffer = terminal.backend().buffer();
-
-        let title = row_text(buffer, 3, area.width);
-        assert!(title.contains("refund idempotency"), "title: {title}");
-        let branch = row_text(buffer, 4, area.width);
-        assert!(branch.contains("⎇ worktree/fix-refunds"), "branch: {branch}");
-        let chips = row_text(buffer, 5, area.width);
-        assert!(chips.contains("claude"), "chips: {chips}");
-    }
-
-    #[test]
+    #[test]    #[test]
     fn collapsed_sidebar_renders_display_order_with_dim_settled_rows() {
         let mut state = session_app(&[
             ("oldest", Some(10), None),

@@ -47,6 +47,8 @@ pub(crate) use self::release_notes::{
     RELEASE_NOTES_MODAL_SIZE,
 };
 use self::release_notes::{render_product_announcement_overlay, render_release_notes_overlay};
+#[cfg(test)]
+pub(crate) use self::sidebar::workspace_drop_indicator_row;
 pub(crate) use self::scrollbar::{
     pane_scrollbar_rect, release_notes_scrollbar_rect, scrollbar_offset_from_drag_row,
     scrollbar_offset_from_row, scrollbar_thumb_grab_offset, should_show_scrollbar,
@@ -79,8 +81,7 @@ pub(crate) use self::{
         agent_panel_toggle_rect, all_agent_panel_entries, collapsed_sidebar_sections,
         collapsed_sidebar_toggle_rect, compute_workspace_card_areas, expanded_sidebar_sections,
         expanded_sidebar_toggle_rect, normalized_workspace_scroll, sidebar_section_divider_rect,
-        settled_show_more_rect, workspace_drop_indicator_row, workspace_drop_slots,
-        workspace_group_chevron_rect,
+        settled_show_more_rect, workspace_drop_slots, workspace_group_chevron_rect,
         workspace_list_entries,
         workspace_list_entries_expanded, workspace_list_rect, workspace_list_scroll_metrics,
         workspace_list_scrollbar_rect, workspace_parent_group_state, AgentPanelEntry,

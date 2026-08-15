@@ -1,7 +1,6 @@
 use super::AgentPanelEntry;
 use crate::config::{
-    AgentSidebarToken, AgentsSidebarConfig, SidebarTokenStyle, SpaceSidebarToken,
-    SpacesSidebarConfig,
+    AgentSidebarToken, AgentsSidebarConfig, SidebarTokenStyle,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]

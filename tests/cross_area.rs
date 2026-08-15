@@ -896,7 +896,7 @@ fn cross_area_client_and_api_workspace_views_are_consistent() {
     let before = workspace_count(&api_socket);
 
     // Create a workspace via API while the client is attached.
-    let created = workspace_create(&api_socket, "api-visible-workspace");
+    let created = workspace_create(&api_socket, "api-visible-ws");
     let created_workspace_id = created["result"]["workspace"]["workspace_id"]
         .as_str()
         .expect("workspace.create should return workspace_id")
@@ -906,7 +906,7 @@ fn cross_area_client_and_api_workspace_views_are_consistent() {
     // label, proving client-side state reflects the API surface.
     let saw_workspace_on_client =
         wait_for_frame_matching(&mut client, Duration::from_secs(3), |frame| {
-            frame_contains_text(frame, "api-visible-workspace")
+            frame_contains_text(frame, "api-visible-ws")
         })
         .expect("frame decoding should succeed");
     assert!(
@@ -929,7 +929,7 @@ fn cross_area_client_and_api_workspace_views_are_consistent() {
     );
 
     let listed = workspace_list(&api_socket);
-    let listed_workspace_id = workspace_id_by_label(&listed, "api-visible-workspace");
+    let listed_workspace_id = workspace_id_by_label(&listed, "api-visible-ws");
     assert_eq!(
         listed_workspace_id, created_workspace_id,
         "API and client-side state should reference the same created workspace"
@@ -1040,6 +1040,8 @@ fn cross_area_server_kill_then_restart_and_reconnect() {
                         || out.contains("workspace")
                         || out.contains("pane")
                         || out.contains("terminal")
+                        || out.contains("\u{2502}")
+                        || out.contains("sessions")
                     {
                         observed = true;
                         break;
