@@ -1021,6 +1021,12 @@ impl App {
             Method::WorkspaceRename(params) => {
                 return self.handle_workspace_rename(request.id, params);
             }
+            Method::WorkspaceSetGoal(params) => {
+                return self.handle_workspace_set_goal(request.id, params);
+            }
+            Method::WorkspaceSetSettled(params) => {
+                return self.handle_workspace_set_settled(request.id, params);
+            }
             Method::WorkspaceMove(params) => {
                 return self.handle_workspace_move(request.id, params);
             }

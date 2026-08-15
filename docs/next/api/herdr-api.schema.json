@@ -1079,8 +1079,21 @@
             "focused": {
               "type": "boolean"
             },
+            "goal": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "label": {
               "type": "string"
+            },
+            "last_activity": {
+              "format": "int64",
+              "type": [
+                "integer",
+                "null"
+              ]
             },
             "number": {
               "format": "uint",
@@ -1091,6 +1104,13 @@
               "format": "uint",
               "minimum": 0,
               "type": "integer"
+            },
+            "settled": {
+              "format": "int64",
+              "type": [
+                "integer",
+                "null"
+              ]
             },
             "tab_count": {
               "format": "uint",
@@ -4163,6 +4183,12 @@
               "default": false,
               "type": "boolean"
             },
+            "goal": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "label": {
               "type": [
                 "string",
@@ -4267,6 +4293,36 @@
             "workspace_id",
             "source",
             "tokens"
+          ],
+          "type": "object"
+        },
+        "WorkspaceSetGoalParams": {
+          "properties": {
+            "goal": {
+              "type": "string"
+            },
+            "workspace_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "workspace_id",
+            "goal"
+          ],
+          "type": "object"
+        },
+        "WorkspaceSetSettledParams": {
+          "properties": {
+            "settled": {
+              "type": "boolean"
+            },
+            "workspace_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "workspace_id",
+            "settled"
           ],
           "type": "object"
         },
@@ -4659,6 +4715,38 @@
             },
             "params": {
               "$ref": "#/schemas/request/$defs/WorkspaceRenameParams"
+            }
+          },
+          "required": [
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "workspace.set_goal",
+              "type": "string"
+            },
+            "params": {
+              "$ref": "#/schemas/request/$defs/WorkspaceSetGoalParams"
+            }
+          },
+          "required": [
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "workspace.set_settled",
+              "type": "string"
+            },
+            "params": {
+              "$ref": "#/schemas/request/$defs/WorkspaceSetSettledParams"
             }
           },
           "required": [
@@ -9938,8 +10026,21 @@
             "focused": {
               "type": "boolean"
             },
+            "goal": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "label": {
               "type": "string"
+            },
+            "last_activity": {
+              "format": "int64",
+              "type": [
+                "integer",
+                "null"
+              ]
             },
             "number": {
               "format": "uint",
@@ -9950,6 +10051,13 @@
               "format": "uint",
               "minimum": 0,
               "type": "integer"
+            },
+            "settled": {
+              "format": "int64",
+              "type": [
+                "integer",
+                "null"
+              ]
             },
             "tab_count": {
               "format": "uint",

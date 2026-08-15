@@ -59,15 +59,22 @@ pub fn configure_from_args(args: &[String]) -> Result<Vec<String>, String> {
             cleaned.extend_from_slice(&args[index..]);
             break;
         }
-        if arg == "--session" {
+        // --instance is the fork's name for a named persistent server
+        // session; --session remains a compat alias.
+        if arg == "--session" || arg == "--instance" {
             let Some(value) = args.get(index + 1) else {
-                return Err("missing value for --session".to_string());
+                return Err(format!("missing value for {arg}"));
             };
             requested_session = Some(value.clone());
             index += 2;
             continue;
         }
         if let Some(value) = arg.strip_prefix("--session=") {
+            requested_session = Some(value.to_string());
+            index += 1;
+            continue;
+        }
+        if let Some(value) = arg.strip_prefix("--instance=") {
             requested_session = Some(value.to_string());
             index += 1;
             continue;

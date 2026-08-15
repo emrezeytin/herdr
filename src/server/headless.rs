@@ -1022,6 +1022,7 @@ impl HeadlessServer {
                 cwd,
                 focus: true,
                 label,
+                goal: None,
                 env: Default::default(),
             }),
         )

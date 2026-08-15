@@ -1845,8 +1845,10 @@ pub(crate) fn update_install_command() -> &'static str {
 
 pub(crate) fn update_install_instruction(install_command: &str) -> String {
     match install_command {
-        HERDR_UPDATE_COMMAND => {
-            "detach, run `herdr update`, then follow its restart guidance".to_string()
+        // Legacy manifests emit the upstream `herdr update` command; the fork's
+        // own manifests emit `sessionr update`. Both mean self-update.
+        HERDR_UPDATE_COMMAND | "herdr update" => {
+            format!("detach, run `{install_command}`, then follow its restart guidance")
         }
         HOMEBREW_UPDATE_COMMAND => {
             "detach, run `brew update && brew upgrade herdr`, then restart this Herdr session when ready".to_string()
@@ -2705,6 +2707,10 @@ mod tests {
     fn update_install_instruction_distinguishes_install_from_restart() {
         assert_eq!(
             update_install_instruction(HERDR_UPDATE_COMMAND),
+            "detach, run `sessionr update`, then follow its restart guidance"
+        );
+        assert_eq!(
+            update_install_instruction("herdr update"),
             "detach, run `herdr update`, then follow its restart guidance"
         );
         assert_eq!(

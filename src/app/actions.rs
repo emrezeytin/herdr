@@ -1124,6 +1124,7 @@ impl AppState {
             self.active = Some(idx);
             self.selected = idx;
             let workspace_id = self.workspaces[idx].id.clone();
+            self.workspaces[idx].touch_activity();
             crate::logging::workspace_focused(&workspace_id);
             self.mark_session_dirty();
             self.ensure_workspace_visible(idx);
@@ -3006,6 +3007,9 @@ impl AppState {
             self.next_agent_state_change_seq += 1;
             if let Some(terminal) = self.terminals.get_mut(&terminal_id) {
                 terminal.last_agent_state_change_seq = Some(self.next_agent_state_change_seq);
+            }
+            if let Some(ws) = self.workspaces.get_mut(ws_idx) {
+                ws.touch_activity();
             }
         }
         let seen = self.apply_pane_state_change(ws_idx, pane_id, &change, suppress_completion)?;

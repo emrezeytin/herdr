@@ -1022,6 +1022,7 @@ impl App {
                             cwd: Some(cwd.display().to_string()),
                             focus: true,
                             label,
+                            goal: None,
                             env: Default::default(),
                         },
                     );

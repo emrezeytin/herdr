@@ -19,6 +19,7 @@ mod protocol_guard;
 mod runtime;
 mod server;
 mod server_not_running;
+mod session;
 mod spec;
 mod status;
 mod tab;
@@ -108,7 +109,8 @@ pub fn maybe_run(args: &[String]) -> std::io::Result<CommandOutcome> {
         "pane" => pane::run_pane_command(&args[2..])?,
         "plugin" => plugin::run_plugin_command(&args[2..])?,
         "integration" => integration::run_integration_command(&args[2..])?,
-        "session" => run_session_command(&args[2..])?,
+        "instance" => run_instance_command(&args[2..])?,
+        "session" => session::run_session_command(&args[2..])?,
         _ => return Ok(CommandOutcome::NotCli),
     };
 
@@ -406,42 +408,42 @@ fn run_terminal_command(args: &[String]) -> std::io::Result<i32> {
     }
 }
 
-fn run_session_command(args: &[String]) -> std::io::Result<i32> {
+fn run_instance_command(args: &[String]) -> std::io::Result<i32> {
     let Some(subcommand) = args.first().map(|arg| arg.as_str()) else {
-        print_session_help();
+        print_instance_help();
         return Ok(2);
     };
 
     match subcommand {
-        "list" => session_list(&args[1..]),
-        "attach" => session_attach_help(&args[1..]),
-        "stop" => session_stop(&args[1..]),
-        "delete" => session_delete(&args[1..]),
+        "list" => instance_list(&args[1..]),
+        "attach" => instance_attach_help(&args[1..]),
+        "stop" => instance_stop(&args[1..]),
+        "delete" => instance_delete(&args[1..]),
         "help" | "--help" | "-h" => {
-            print_session_help();
+            print_instance_help();
             Ok(0)
         }
         _ => {
-            print_session_help();
+            print_instance_help();
             Ok(2)
         }
     }
 }
 
-fn session_attach_help(args: &[String]) -> std::io::Result<i32> {
+fn instance_attach_help(args: &[String]) -> std::io::Result<i32> {
     if matches!(
         args.first().map(String::as_str),
         Some("help" | "--help" | "-h")
     ) {
-        eprintln!("usage: sessionr session attach <name>");
+        eprintln!("usage: sessionr instance attach <name>");
         return Ok(0);
     }
-    eprintln!("usage: sessionr session attach <name>");
+    eprintln!("usage: sessionr instance attach <name>");
     Ok(2)
 }
 
-fn session_list(args: &[String]) -> std::io::Result<i32> {
-    let json = match parse_session_json_only(args, "usage: sessionr session list [--json]") {
+fn instance_list(args: &[String]) -> std::io::Result<i32> {
+    let json = match parse_session_json_only(args, "usage: sessionr instance list [--json]") {
         Ok(json) => json,
         Err(code) => return Ok(code),
     };
@@ -452,14 +454,14 @@ fn session_list(args: &[String]) -> std::io::Result<i32> {
             "sessions": sessions,
         }));
     } else {
-        print_session_table(&sessions);
+        print_instance_table(&sessions);
     }
     Ok(0)
 }
 
-fn session_stop(args: &[String]) -> std::io::Result<i32> {
+fn instance_stop(args: &[String]) -> std::io::Result<i32> {
     let (name, json) =
-        match parse_session_name_and_json(args, "usage: sessionr session stop <name> [--json]") {
+        match parse_session_name_and_json(args, "usage: sessionr instance stop <name> [--json]") {
             Ok(parsed) => parsed,
             Err(code) => return Ok(code),
         };
@@ -490,9 +492,9 @@ fn session_stop(args: &[String]) -> std::io::Result<i32> {
     }
 }
 
-fn session_delete(args: &[String]) -> std::io::Result<i32> {
+fn instance_delete(args: &[String]) -> std::io::Result<i32> {
     let (name, json) =
-        match parse_session_name_and_json(args, "usage: sessionr session delete <name> [--json]") {
+        match parse_session_name_and_json(args, "usage: sessionr instance delete <name> [--json]") {
             Ok(parsed) => parsed,
             Err(code) => return Ok(code),
         };
@@ -973,7 +975,7 @@ fn parse_session_name_and_json(args: &[String], usage: &str) -> Result<(String, 
     Ok((name, json))
 }
 
-fn print_session_table(sessions: &[crate::session::SessionInfo]) {
+fn print_instance_table(sessions: &[crate::session::SessionInfo]) {
     println!("{:<20} {:<8} {:<48} socket", "name", "status", "directory");
     for session in sessions {
         println!(
@@ -1019,13 +1021,13 @@ fn print_terminal_help() {
     eprintln!("  detach from direct attach with ctrl+b q; send literal ctrl+b with ctrl+b ctrl+b");
 }
 
-fn print_session_help() {
-    eprintln!("sessionr session commands:");
-    eprintln!("  sessionr session list [--json]");
-    eprintln!("  sessionr session attach <name>");
-    eprintln!("  sessionr session stop <name> [--json]");
-    eprintln!("  sessionr session delete <name> [--json]");
-    eprintln!("  use 'default' as <name> to target the default session for stop");
+fn print_instance_help() {
+    eprintln!("sessionr instance commands:");
+    eprintln!("  sessionr instance list [--json]");
+    eprintln!("  sessionr instance attach <name>");
+    eprintln!("  sessionr instance stop <name> [--json]");
+    eprintln!("  sessionr instance delete <name> [--json]");
+    eprintln!("  use 'default' as <name> to target the default instance for stop");
 }
 
 fn _print_json<T: Serialize>(value: &T) {

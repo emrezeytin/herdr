@@ -978,6 +978,7 @@ impl App {
                         cwd: None,
                         focus: true,
                         label: None,
+                        goal: None,
                         env: Default::default(),
                     },
                 );
@@ -1017,6 +1018,7 @@ impl App {
                         cwd: Some(cwd.display().to_string()),
                         focus: true,
                         label: None,
+                        goal: None,
                         env: Default::default(),
                     },
                 );

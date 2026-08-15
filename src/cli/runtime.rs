@@ -2,7 +2,8 @@ use crate::api::schema::{
     EmptyParams, Method, PaneFocusDirectionParams, PaneInputSetParams, PaneMoveParams,
     PaneRenameParams, PaneResizeParams, PaneSplitParams, PaneSwapParams, PaneTarget,
     PaneZoomParams, Request, TabCreateParams, TabListParams, TabRenameParams, TabTarget,
-    WorkspaceCreateParams, WorkspaceRenameParams, WorkspaceTarget, WorktreeCreateParams,
+    WorkspaceCreateParams, WorkspaceRenameParams, WorkspaceSetGoalParams, WorkspaceSetSettledParams,
+    WorkspaceTarget, WorktreeCreateParams,
     WorktreeListParams, WorktreeOpenParams, WorktreeRemoveParams,
 };
 
@@ -36,6 +37,14 @@ pub(super) fn workspace_focus(workspace_id: String) -> std::io::Result<i32> {
         "cli:workspace:focus",
         Method::WorkspaceFocus(WorkspaceTarget { workspace_id }),
     )
+}
+
+pub(super) fn workspace_set_goal(params: WorkspaceSetGoalParams) -> std::io::Result<i32> {
+    print_method_response("cli:workspace:set_goal", Method::WorkspaceSetGoal(params))
+}
+
+pub(super) fn workspace_set_settled(params: WorkspaceSetSettledParams) -> std::io::Result<i32> {
+    print_method_response("cli:workspace:set_settled", Method::WorkspaceSetSettled(params))
 }
 
 pub(super) fn workspace_rename(params: WorkspaceRenameParams) -> std::io::Result<i32> {

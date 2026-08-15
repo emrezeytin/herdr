@@ -1512,6 +1512,7 @@ impl App {
         if let Err(err) = runtime.try_send_bytes(Bytes::from(params.text)) {
             return encode_error(id, "pane_send_failed", err.to_string());
         }
+        self.state.workspaces[ws_idx].touch_activity();
 
         encode_success(id, ResponseResult::Ok {})
     }

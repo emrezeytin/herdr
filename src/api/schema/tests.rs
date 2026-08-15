@@ -53,6 +53,7 @@ fn request_uses_dot_method_names() {
             cwd: Some("/tmp".into()),
             focus: true,
             label: Some("api".into()),
+            goal: None,
             env: Default::default(),
         }),
     };
@@ -719,6 +720,9 @@ fn worktree_request_and_response_round_trip() {
                     checkout_path: "/worktrees/herdr/worktree-api".into(),
                     is_linked_worktree: true,
                 }),
+                goal: None,
+                last_activity: None,
+                settled: None,
             },
             tab: TabInfo {
                 tab_id: "w_1:1".into(),
@@ -805,6 +809,9 @@ fn worktree_lifecycle_events_round_trip() {
             checkout_path: "/worktrees/herdr/worktree-api".into(),
             is_linked_worktree: true,
         }),
+        goal: None,
+        last_activity: None,
+        settled: None,
     };
     let worktree = WorktreeInfo {
         path: "/worktrees/herdr/worktree-api".into(),

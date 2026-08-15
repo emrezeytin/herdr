@@ -104,7 +104,7 @@ mod workspace;
 mod worktree;
 
 fn init_logging() {
-    crate::logging::init_file_logging("sessionr.log");
+    crate::logging::init_file_logging("herdr.log");
 }
 
 const DEFAULT_CONFIG: &str = r##"# sessionr configuration
@@ -709,7 +709,7 @@ fn main() -> io::Result<()> {
         println!();
         println!("Options:");
         println!("  --no-session        Run monolithically (no server/client, escape hatch)");
-        println!("  --session <name>    Use or create a named persistent session");
+        println!("  --instance <name>   Use or create a named persistent server session (alias: --session)");
         println!("  --remote <target>   Attach through SSH to a remote Herdr server");
         println!("  --remote-keybindings <local|server>");
         println!("                      Keybindings for --remote app attach (default: local)");
@@ -747,6 +747,7 @@ fn main() -> io::Result<()> {
     let known_flags = [
         "--no-session",
         "--session",
+        "--instance",
         "--remote",
         "--remote-keybindings",
         "--version",
@@ -776,6 +777,7 @@ fn main() -> io::Result<()> {
                 "worktree",
                 "pane",
                 "session",
+                "instance",
                 "integration",
             ]
             .contains(&arg.as_str())

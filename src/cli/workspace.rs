@@ -97,6 +97,7 @@ fn workspace_create(args: &[String]) -> std::io::Result<i32> {
         cwd,
         focus,
         label,
+        goal: None,
         env,
     })
 }

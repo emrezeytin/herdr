@@ -3,7 +3,8 @@ use std::path::PathBuf;
 use crate::api::schema::{
     EventData, EventEnvelope, EventKind, ResponseResult, WorkspaceCreateParams,
     WorkspaceMoveBlockParams, WorkspaceMoveParams, WorkspaceRenameParams,
-    WorkspaceReportMetadataParams, WorkspaceTarget,
+    WorkspaceReportMetadataParams, WorkspaceSetGoalParams, WorkspaceSetSettledParams,
+    WorkspaceTarget,
 };
 use crate::app::App;
 
@@ -58,6 +59,11 @@ impl App {
                     if let Some(workspace) = self.state.workspaces.get_mut(index) {
                         workspace.set_custom_name(label);
                         crate::logging::workspace_renamed(&workspace.id);
+                    }
+                }
+                if let Some(goal) = params.goal {
+                    if let Some(workspace) = self.state.workspaces.get_mut(index) {
+                        workspace.goal = Some(goal);
                     }
                 }
                 self.emit_workspace_open_events(index);
@@ -330,6 +336,39 @@ impl App {
         encode_success(id, ResponseResult::Ok {})
     }
 
+    pub(super) fn handle_workspace_set_goal(
+        &mut self,
+        id: String,
+        params: WorkspaceSetGoalParams,
+    ) -> String {
+        let Some(index) = self.parse_workspace_id(&params.workspace_id) else {
+            return workspace_not_found(id, &params.workspace_id);
+        };
+        let Some(workspace) = self.state.workspaces.get_mut(index) else {
+            return workspace_not_found(id, &params.workspace_id);
+        };
+        workspace.goal = Some(params.goal);
+        workspace.touch_activity();
+        self.state.mark_session_dirty();
+        encode_success(id, ResponseResult::Ok {})
+    }
+
+    pub(super) fn handle_workspace_set_settled(
+        &mut self,
+        id: String,
+        params: WorkspaceSetSettledParams,
+    ) -> String {
+        let Some(index) = self.parse_workspace_id(&params.workspace_id) else {
+            return workspace_not_found(id, &params.workspace_id);
+        };
+        let Some(workspace) = self.state.workspaces.get_mut(index) else {
+            return workspace_not_found(id, &params.workspace_id);
+        };
+        workspace.set_settled(params.settled);
+        self.state.mark_session_dirty();
+        encode_success(id, ResponseResult::Ok {})
+    }
+
     fn workspace_list_info(&self) -> Vec<crate::api::schema::WorkspaceInfo> {
         self.state
             .workspaces
@@ -413,6 +452,7 @@ mod tests {
                 cwd: None,
                 focus: false,
                 label: None,
+                goal: None,
                 env: Default::default(),
             },
         );

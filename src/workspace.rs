@@ -196,6 +196,12 @@ pub struct Workspace {
     pub(crate) cached_git_space: Option<GitSpaceMetadata>,
     /// Explicit Herdr-managed worktree grouping provenance.
     pub worktree_space: Option<WorktreeSpaceMembership>,
+    /// Session goal: human-readable work title (sidebar's first line).
+    pub goal: Option<String>,
+    /// Unix seconds of the last agent state change, driver input, or focus.
+    pub last_activity: Option<i64>,
+    /// Unix seconds when the session was manually marked settled. None = active.
+    pub settled: Option<i64>,
     pub(crate) metadata_tokens: crate::metadata_tokens::MetadataTokens,
     pub(crate) metadata_token_sequences: HashMap<String, u64>,
     /// Public pane numbers within this workspace. Closed pane numbers are not reused.
@@ -224,7 +230,30 @@ impl DerefMut for Workspace {
     }
 }
 
+pub(crate) fn now_unix_secs() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|duration| duration.as_secs() as i64)
+        .unwrap_or(0)
+}
+
 impl Workspace {
+    pub fn is_settled(&self) -> bool {
+        self.settled.is_some()
+    }
+
+    pub fn touch_activity(&mut self) {
+        self.last_activity = Some(now_unix_secs());
+    }
+
+    pub fn set_settled(&mut self, settled: bool) {
+        self.settled = if settled {
+            Some(now_unix_secs())
+        } else {
+            None
+        };
+    }
+
     fn adjust_active_tab_after_removal(&mut self, removed_idx: usize) {
         if self.tabs.is_empty() {
             self.active_tab = 0;
@@ -262,6 +291,9 @@ impl Workspace {
             cached_git_ahead_behind: None,
             cached_git_space,
             worktree_space: None,
+            goal: None,
+            last_activity: Some(now_unix_secs()),
+            settled: None,
             metadata_tokens: crate::metadata_tokens::MetadataTokens::default(),
             metadata_token_sequences: HashMap::new(),
             public_pane_numbers,
@@ -461,6 +493,9 @@ impl Workspace {
                 cached_git_ahead_behind: None,
                 cached_git_space,
                 worktree_space: None,
+                goal: None,
+                last_activity: Some(now_unix_secs()),
+                settled: None,
                 metadata_tokens: crate::metadata_tokens::MetadataTokens::default(),
                 metadata_token_sequences: HashMap::new(),
                 public_pane_numbers,
@@ -1299,6 +1334,9 @@ impl Workspace {
             cached_git_ahead_behind: None,
             cached_git_space: None,
             worktree_space: None,
+            goal: None,
+            last_activity: Some(now_unix_secs()),
+            settled: None,
             metadata_tokens: crate::metadata_tokens::MetadataTokens::default(),
             metadata_token_sequences: HashMap::new(),
             public_pane_numbers,
