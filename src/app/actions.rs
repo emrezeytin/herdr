@@ -1124,7 +1124,9 @@ impl AppState {
             self.active = Some(idx);
             self.selected = idx;
             let workspace_id = self.workspaces[idx].id.clone();
-            self.workspaces[idx].touch_activity();
+            // Focusing a session must not count as activity; recency comes from
+            // agent state changes and driver input, so picking a session does
+            // not reshuffle the list.
             crate::logging::workspace_focused(&workspace_id);
             self.mark_session_dirty();
             self.ensure_workspace_visible(idx);

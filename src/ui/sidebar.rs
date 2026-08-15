@@ -1171,6 +1171,34 @@ mod tests {
     }
 
     #[test]
+    fn focusing_a_session_does_not_change_its_activity() {
+        let mut state = session_app(&[
+            ("a", Some(100), None),
+            ("b", Some(300), None),
+            ("c", Some(200), None),
+        ]);
+        state.active = Some(1);
+        state.selected = 1;
+        let before = state.workspaces.iter().map(|ws| ws.last_activity).collect::<Vec<_>>();
+
+        state.switch_workspace(0);
+        state.switch_workspace(2);
+
+        let after = state.workspaces.iter().map(|ws| ws.last_activity).collect::<Vec<_>>();
+        assert_eq!(before, after, "focusing must not touch last_activity");
+        // Display order stays recency-sorted, not focus-sorted.
+        let entries = workspace_list_entries(&state);
+        let order: Vec<usize> = entries
+            .iter()
+            .filter_map(|entry| match entry {
+                WorkspaceListEntry::Workspace { ws_idx, .. } => Some(*ws_idx),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(order, vec![1, 2, 0]);
+    }
+
+    #[test]
     fn session_entries_sort_active_by_recency_desc() {
         let state = session_app(&[
             ("older", Some(100), None),
