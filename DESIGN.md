@@ -11,9 +11,9 @@ Sessions = tasks. Worktrees = isolation. Agents = workers. One repo, N parallel 
 ```
 ┌────────────────────────────┐
 │ ⟳ Prototype landing…  now  │  ← session: name first line,
-│   ⎇ main     kutas-website │     mark + goal + time
-│ ● Smaller campaign…    2h  │  ← branch + repo on second
-│   ⎇ main  fuse-playbody…   │     line, repo right-aligned
+│   main                     │     mark + goal + time
+│ ● Smaller campaign…    2h  │  ← bare branch on second
+│   main                     │     line, herdr-style indent
 │ ✓ Check size order…    1d  │  ← sorted by recency desc
 │   ⎇ main           bigleet │
 ├────────────────────────────┤
@@ -27,7 +27,7 @@ Sessions = tasks. Worktrees = isolation. Agents = workers. One repo, N parallel 
 Rules:
 
 - **Focused session** keeps its row highlight in the list (no separate card; the card was dropped in favor of a plain list).
-- **Session row** = session name on the first line (gutter state mark + goal + right-aligned relative time; goal wraps 2 lines), branch line second (`⎇` + worktree branch, `main` when no worktree) with the repo name right-aligned on the same line. No group headers, no avatars — the session name leads.
+- **Session row** = session name on the first line (gutter state mark + goal + right-aligned relative time; goal wraps 2 lines), branch line second — bare branch name on a three-space indent, matching herdr's spacing (no `⎇` glyph, no repo suffix). No group headers, no avatars — the session name leads.
 - **Gutter mark** = rolled-up agent state: `⟳` working, `●` blocked, `✓` done, `·` idle/plain shell, dim dot = no agents.
 - **Repo** = the session's git space (herdr's worktree-space metadata), shown dim on the branch line. Sorting is recency desc overall; same-repo sessions need no contiguity.
 - **Settled** = manually marked (`session settle`). Auto-archive after N days inactivity is a later option; manual only at first. Settled sessions dim, sort by settled_at desc, collapse behind "Show N more".

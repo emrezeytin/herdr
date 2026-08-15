@@ -989,26 +989,15 @@ fn render_workspace_list(
                     Rect::new(area.x, row_y, body.width, 1),
                 );
 
-                let mut line2 = vec![Span::raw("  ")];
-                let branch = ws.branch().unwrap_or_else(|| "main".to_string());
-                let repo = ws
-                    .worktree_space()
-                    .map(|space| space.label.clone())
-                    .or_else(|| ws.branch().map(|_| ws.display_name_from(&app.terminals, terminal_runtimes)));
+                // Branch line mirrors herdr's spacing: three-space indent,
+                // bare branch name, no prefix glyph, no repo suffix.
+                let mut line2 = vec![Span::raw("   ")];
                 let branch_style = Style::default().fg(if dim { p.surface_dim } else { p.overlay0 });
-                let repo_style = Style::default().fg(if dim { p.surface_dim } else { p.overlay0 });
-                line2.push(Span::styled(
-                    format!("⎇ {branch}"),
-                    branch_style,
-                ));
-                if let Some(repo) = repo.filter(|repo| repo != &branch) {
-                    let repo_width = display_width_u16(&repo);
-                    let branch_width = display_width_u16(&format!("⎇ {branch}"));
-                    let padding = body
-                        .width
-                        .saturating_sub(2 + branch_width + repo_width);
-                    line2.push(Span::raw(" ".repeat(padding as usize)));
-                    line2.push(Span::styled(repo, repo_style));
+                if let Some(branch) = ws.branch() {
+                    line2.push(Span::styled(
+                        truncate_end(&branch, body.width.saturating_sub(3) as usize),
+                        branch_style,
+                    ));
                 }
                 frame.render_widget(
                     Paragraph::new(Line::from(line2)),
@@ -1313,8 +1302,8 @@ mod tests {
         assert!(line1.contains("fix billing bug"), "line1: {line1}");
         assert!(line1.contains("2m"), "line1: {line1}");
         let line2 = row_text(buffer, 3, area.width);
-        assert!(line2.contains("⎇ main"), "line2: {line2}");
-        assert!(line2.contains("repo-work"), "line2: {line2}");
+        assert!(line2.starts_with("   main"), "line2: {line2}");
+        assert!(!line2.contains("⎇"), "line2: {line2}");
     }
 
     #[test]
