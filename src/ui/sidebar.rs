@@ -11,7 +11,7 @@ use ratatui::{
 use self::tokens::ResolvedToken;
 use super::scrollbar::{render_scrollbar, should_show_scrollbar};
 use super::status::{state_icon, state_label};
-use super::text::{display_width, display_width_u16, truncate_end};
+use super::text::{display_width_u16, truncate_end};
 use crate::app::state::{AgentPanelSort, Palette};
 use crate::app::{AppState, Mode};
 use crate::detect::AgentState;
@@ -820,29 +820,7 @@ pub(crate) fn workspace_drop_slots(
         slots.push((target, row));
     }
     slots
-}
-/// Relative wall-clock age for sidebar rows, in the reference app's style:
-/// `now`, `23m`, `3h`, `7d`, `2w`, `4mo`.
-fn relative_time(now_secs: i64, then_secs: i64) -> String {
-    let diff = (now_secs - then_secs).max(0);
-    match diff {
-        0..=59 => "now".to_string(),
-        60..=3599 => format!("{}m", diff / 60),
-        3600..=86399 => format!("{}h", diff / 3600),
-        86400..=604799 => format!("{}d", diff / 86400),
-        604800..=2678399 => format!("{}w", diff / 604800),
-        _ => format!("{}mo", diff / 2678400),
-    }
-}
-
-/// Row age label: settled rows show time since settled, active rows show time
-/// since last activity.
-fn session_row_age(ws: &crate::workspace::Workspace) -> Option<String> {
-    let then = ws.settled.or(ws.last_activity)?;
-    Some(relative_time(crate::workspace::now_unix_secs(), then))
-}
-
-pub(super) fn render_sidebar(
+}pub(super) fn render_sidebar(
     app: &AppState,
     terminal_runtimes: &TerminalRuntimeRegistry,
     frame: &mut Frame,
@@ -960,7 +938,6 @@ fn render_workspace_list(
                     .unwrap_or_else(|| {
                         ws.display_name_from(&app.terminals, terminal_runtimes)
                     });
-                let time = session_row_age(ws).unwrap_or_default();
                 let (agg_state, agg_seen) = ws.aggregate_state(&app.terminals);
                 let (mark, mark_style) = if is_settled {
                     ("·", Style::default().fg(p.overlay0))
@@ -968,22 +945,11 @@ fn render_workspace_list(
                     state_icon(agg_state, agg_seen, app.status_indicators, p)
                 };
 
+                // Herdr-style row: mark, name, nothing else. Recency drives the
+                // order; rows carry no relative-time column.
                 let mut line1 = vec![Span::raw(" "), Span::styled(mark, mark_style), Span::raw(" ")];
-                let time_style = Style::default().fg(if dim { p.surface_dim } else { p.overlay0 });
-                let title_width = body
-                    .width
-                    .saturating_sub(display_width_u16(&time) + 3) as usize;
+                let title_width = body.width.saturating_sub(3) as usize;
                 line1.push(Span::styled(truncate_end(&title, title_width), name_style));
-                while display_width(
-                    &line1
-                        .iter()
-                        .map(|span| span.content.as_ref())
-                        .collect::<String>(),
-                ) < body.width.saturating_sub(display_width_u16(&time)) as usize
-                {
-                    line1.push(Span::raw(" "));
-                }
-                line1.push(Span::styled(&time, time_style));
                 frame.render_widget(
                     Paragraph::new(Line::from(line1)),
                     Rect::new(area.x, row_y, body.width, 1),
@@ -1146,19 +1112,6 @@ mod tests {
     }
 
     #[test]
-    fn relative_time_buckets_cover_reference_styles() {
-        let now = 1_000_000;
-        assert_eq!(relative_time(now, now), "now");
-        assert_eq!(relative_time(now, now - 59), "now");
-        assert_eq!(relative_time(now, now - 60), "1m");
-        assert_eq!(relative_time(now, now - 3_540), "59m");
-        assert_eq!(relative_time(now, now - 3_600), "1h");
-        assert_eq!(relative_time(now, now - 82_800), "23h");
-        assert_eq!(relative_time(now, now - 86_400), "1d");
-        assert_eq!(relative_time(now, now - 604_800), "1w");
-        assert_eq!(relative_time(now, now - 2_678_400), "1mo");
-    }
-
     #[test]
     fn focusing_a_session_does_not_change_its_activity() {
         let mut state = session_app(&[
@@ -1300,7 +1253,6 @@ mod tests {
 
         let line1 = row_text(buffer, 2, area.width);
         assert!(line1.contains("fix billing bug"), "line1: {line1}");
-        assert!(line1.contains("2m"), "line1: {line1}");
         let line2 = row_text(buffer, 3, area.width);
         assert!(line2.starts_with("   main"), "line2: {line2}");
         assert!(!line2.contains("⎇"), "line2: {line2}");

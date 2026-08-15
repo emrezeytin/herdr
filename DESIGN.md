@@ -10,16 +10,16 @@ Sessions = tasks. Worktrees = isolation. Agents = workers. One repo, N parallel 
 
 ```
 ┌────────────────────────────┐
-│ ⟳ Prototype landing…  now  │  ← session: name first line,
-│   main                     │     mark + goal + time
-│ ● Smaller campaign…    2h  │  ← bare branch on second
+│ ⟳ Prototype landing…      │  ← session: name first line,
+│   main                     │     mark + goal
+│ ● Smaller campaign…        │  ← bare branch on second
 │   main                     │     line, herdr-style indent
-│ ✓ Check size order…    1d  │  ← sorted by recency desc
-│   ⎇ main           bigleet │
+│ ✓ Check size order…        │  ← sorted by recency desc
+│   main                     │
 ├────────────────────────────┤
 │ Settled                    │  ← archive section header
 │ ·  Mobile app setup help   │     dimmed, settled_at desc
-│    ⎇ main            bear  │
+│    main                    │
 │ + Show 4 more              │  ← collapse old, shows count
 └────────────────────────────┘
 ```
