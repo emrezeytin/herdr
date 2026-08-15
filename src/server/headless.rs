@@ -5455,7 +5455,9 @@ mod tests {
             .iter()
             .map(|cell| cell.symbol())
             .collect::<String>();
-        assert!(rendered.contains("task"), "rendered frame: {rendered:?}");
+        // The session sidebar shows the workspace name; agent terminal titles
+        // are no longer duplicated into the (removed) agents panel.
+        assert!(rendered.contains("one"), "rendered frame: {rendered:?}");
 
         server
             .app

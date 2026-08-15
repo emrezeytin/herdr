@@ -27,9 +27,9 @@ See DESIGN.md (product + sidebar spec) and mockup.html.
 ## Milestones
 
 1. [x] Fork + rename layer
-2. [ ] Data model: `goal`, `last_activity`, `settled` on Workspace + persistence + touch points
-3. [ ] Sidebar v1: focused card + flat session list + marks + settled section
-4. [ ] Repo on branch line, recency sort
+2. [x] Data model: `goal`, `last_activity`, `settled` on Workspace + persistence + touch points
+3. [x] Sidebar v1: focused card + flat session list + marks + settled section
+4. [x] Repo on branch line, recency sort
 5. [ ] Worktree-first create flow (`session create --goal ... --worktree`)
 6. [ ] Collapsed mode, config tokens, docs
 

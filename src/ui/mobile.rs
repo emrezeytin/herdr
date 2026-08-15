@@ -106,15 +106,29 @@ fn mobile_agents_block_height(app: &AppState) -> usize {
     }
 }
 
+/// Mobile switcher renders workspace rows only; session-sidebar structural
+/// entries (settled header / show-more) do not appear there.
+fn mobile_workspace_entries(app: &AppState) -> Vec<WorkspaceListEntry> {
+    workspace_list_entries_expanded(app)
+        .into_iter()
+        .filter(|entry| matches!(entry, WorkspaceListEntry::Workspace { .. }))
+        .collect()
+}
+
 pub(crate) fn mobile_switcher_workspace_doc_range(
     app: &AppState,
     idx: usize,
 ) -> std::ops::Range<usize> {
     // Spaces render in grouped order, so a workspace's row position is its index
     // in the entry list, not its raw array index.
-    let pos = workspace_list_entries_expanded(app)
+    let pos = mobile_workspace_entries(app)
         .iter()
-        .position(|WorkspaceListEntry::Workspace { ws_idx, .. }| *ws_idx == idx)
+        .position(|entry| {
+            matches!(
+                entry,
+                WorkspaceListEntry::Workspace { ws_idx, .. } if *ws_idx == idx
+            )
+        })
         .unwrap_or(idx);
     // spaces sit after the agents block, then a title + "new workspace" row.
     let start = mobile_agents_block_height(app) + 2 + pos * 2;
@@ -173,13 +187,16 @@ pub(crate) fn mobile_switcher_target_at(
     cursor += 1;
     // Spaces render in grouped (worktree-tree) order, which differs from raw
     // array order, so map the clicked row to the entry's real workspace index.
-    let space_entries = workspace_list_entries_expanded(app);
+    let space_entries = mobile_workspace_entries(app);
     let spaces_end = cursor + space_entries.len() * 2;
     if doc_row >= cursor && doc_row < spaces_end {
         let entry_idx = (doc_row - cursor) / 2;
-        return space_entries.get(entry_idx).map(
-            |WorkspaceListEntry::Workspace { ws_idx, .. }| MobileSwitcherTarget::Workspace(*ws_idx),
-        );
+        return space_entries.get(entry_idx).and_then(|entry| match entry {
+            WorkspaceListEntry::Workspace { ws_idx, .. } => {
+                Some(MobileSwitcherTarget::Workspace(*ws_idx))
+            }
+            WorkspaceListEntry::SettledHeader | WorkspaceListEntry::SettledShowMore => None,
+        });
     }
     cursor = spaces_end;
 
@@ -586,10 +603,11 @@ fn render_mobile_switcher_content(
         p,
     );
     doc_y += 1;
-    let space_entries = workspace_list_entries_expanded(app);
-    for (entry_idx, WorkspaceListEntry::Workspace { ws_idx, indented }) in
-        space_entries.iter().enumerate()
-    {
+    let space_entries = mobile_workspace_entries(app);
+    for (entry_idx, entry) in space_entries.iter().enumerate() {
+        let WorkspaceListEntry::Workspace { ws_idx, indented } = entry else {
+            continue;
+        };
         let Some(ws) = app.workspaces.get(*ws_idx) else {
             continue;
         };
@@ -1453,23 +1471,15 @@ mod tests {
         app.view.mobile_header_rect = Rect::new(0, 0, 40, 2);
         app.view.terminal_area = Rect::new(0, 2, 40, 18);
 
-        // Grouped order pulls the worktree (idx 2) up under its parent (idx 0),
-        // ahead of the unrelated "other" workspace (idx 1): rows are main,
-        // feature, other.
-        assert_eq!(mobile_switcher_workspace_doc_range(&app, 2).start, 4);
-        assert_eq!(mobile_switcher_workspace_doc_range(&app, 1).start, 6);
+        // Session order is recency desc; ties keep workspace order, so the
+        // mobile switcher shows main, other, feature (indices 0, 1, 2).
+        assert_eq!(mobile_switcher_workspace_doc_range(&app, 0).start, 2);
+        assert_eq!(mobile_switcher_workspace_doc_range(&app, 1).start, 4);
+        assert_eq!(mobile_switcher_workspace_doc_range(&app, 2).start, 6);
 
         let viewport = mobile_switcher_areas(&app).viewport;
-        // The second space row on screen is the worktree, not workspaces[1].
         let hit = mobile_switcher_target_at(&app, viewport.x + 2, viewport.y + 4);
-        assert_eq!(hit, Some(MobileSwitcherTarget::Workspace(2)));
-
-        // Mobile ignores collapse: even with the space folded on desktop, the
-        // worktree child still renders in the same position.
-        app.collapsed_space_keys.insert("repo-key".to_string());
-        assert_eq!(mobile_switcher_workspace_doc_range(&app, 2).start, 4);
-        let hit = mobile_switcher_target_at(&app, viewport.x + 2, viewport.y + 4);
-        assert_eq!(hit, Some(MobileSwitcherTarget::Workspace(2)));
+        assert_eq!(hit, Some(MobileSwitcherTarget::Workspace(1)));
     }
 
     #[test]

@@ -314,6 +314,7 @@ pub struct Keybinds {
     pub remove_worktree: ActionKeybinds,
     pub rename_workspace: ActionKeybinds,
     pub close_workspace: ActionKeybinds,
+    pub settle_session: ActionKeybinds,
     pub workspace_picker: ActionKeybinds,
     pub goto: ActionKeybinds,
     pub detach: ActionKeybinds,
@@ -481,6 +482,7 @@ impl Config {
             open_worktree: empty_action!(),
             remove_worktree: empty_action!(),
             rename_workspace: empty_action!(),
+            settle_session: empty_action!(),
             close_workspace: empty_action!(),
             workspace_picker: empty_action!(),
             goto: empty_action!(),
@@ -609,6 +611,7 @@ impl Config {
             apply_action!(keybinds.open_worktree, open_worktree, source);
             apply_action!(keybinds.remove_worktree, remove_worktree, source);
             apply_action!(keybinds.rename_workspace, rename_workspace, source);
+            apply_action!(keybinds.settle_session, settle_session, source);
             apply_action!(keybinds.close_workspace, close_workspace, source);
             apply_action!(keybinds.workspace_picker, workspace_picker, source);
             apply_action!(keybinds.goto, goto, source);

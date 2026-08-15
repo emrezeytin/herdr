@@ -3,7 +3,8 @@ use crate::api::schema::{
     PaneRenameParams, PaneResizeParams, PaneSplitParams, PaneSwapParams, PaneTarget,
     PaneZoomParams, TabCreateParams, TabMoveParams, TabRenameParams, TabTarget,
     WorkspaceCreateParams, WorkspaceMoveBlockParams, WorkspaceMoveParams, WorkspaceRenameParams,
-    WorkspaceTarget, WorktreeCreateParams, WorktreeOpenParams, WorktreeRemoveParams,
+    WorkspaceSetSettledParams, WorkspaceTarget, WorktreeCreateParams, WorktreeOpenParams,
+    WorktreeRemoveParams,
 };
 
 use super::App;
@@ -67,6 +68,14 @@ impl App {
         workspace_id: String,
     ) -> String {
         self.dispatch_runtime_mutation(id, Method::WorkspaceClose(WorkspaceTarget { workspace_id }))
+    }
+
+    pub(crate) fn runtime_workspace_set_settled(
+        &mut self,
+        id: &'static str,
+        params: WorkspaceSetSettledParams,
+    ) -> String {
+        self.dispatch_runtime_mutation(id, Method::WorkspaceSetSettled(params))
     }
 
     pub(crate) fn runtime_tab_create(

@@ -588,6 +588,11 @@ impl AppState {
                         }
                     }
 
+                    if self.settled_show_more_at(mouse.column, mouse.row) {
+                        self.settled_expanded = true;
+                        return None;
+                    }
+
                     if let Some(idx) = self.workspace_at_row(mouse.row) {
                         self.workspace_presses.insert(
                             source_id,

@@ -232,6 +232,12 @@ impl App {
                     }
                 }
             }
+            NavigateAction::SettleSession => {
+                if let Some(ws_idx) = workspace_action_target(&self.state, context) {
+                    self.toggle_workspace_settled_via_api(ws_idx);
+                    leave_navigate_mode(&mut self.state);
+                }
+            }
             NavigateAction::SwitchWorkspace(idx) => {
                 if let Some(ws_idx) = self.state.workspace_at_visible_position(idx) {
                     self.focus_workspace_idx_via_api(ws_idx);
@@ -459,6 +465,20 @@ impl App {
     pub(crate) fn close_workspace_idx_via_api(&mut self, ws_idx: usize) {
         let workspace_id = self.public_workspace_id(ws_idx);
         self.runtime_workspace_close("tui.workspace.close", workspace_id);
+    }
+
+    pub(crate) fn toggle_workspace_settled_via_api(&mut self, ws_idx: usize) {
+        let Some(ws) = self.state.workspaces.get(ws_idx) else {
+            return;
+        };
+        let workspace_id = self.public_workspace_id(ws_idx);
+        self.runtime_workspace_set_settled(
+            "tui.workspace.set_settled",
+            crate::api::schema::WorkspaceSetSettledParams {
+                workspace_id,
+                settled: !ws.is_settled(),
+            },
+        );
     }
 
     pub(crate) fn move_workspace_via_api(&mut self, source_ws_idx: usize, insert_idx: usize) {
@@ -1386,6 +1406,7 @@ pub(crate) enum NavigateAction {
     RemoveWorktree,
     RenameWorkspace,
     CloseWorkspace,
+    SettleSession,
     SwitchWorkspace(usize),
     SwitchTab(usize),
     FocusAgent(usize),
@@ -1537,6 +1558,7 @@ fn non_indexed_action_for_key(
         (&kb.remove_worktree, NavigateAction::RemoveWorktree),
         (&kb.rename_workspace, NavigateAction::RenameWorkspace),
         (&kb.close_workspace, NavigateAction::CloseWorkspace),
+        (&kb.settle_session, NavigateAction::SettleSession),
         (&kb.previous_workspace, NavigateAction::PreviousWorkspace),
         (&kb.next_workspace, NavigateAction::NextWorkspace),
         (&kb.previous_agent, NavigateAction::PreviousAgent),
@@ -1686,6 +1708,16 @@ pub(super) fn execute_navigate_action_in_context(
                     state.close_selected_workspace();
                     leave_navigate_mode(state);
                 }
+            }
+        }
+        NavigateAction::SettleSession => {
+            if let Some(ws_idx) = workspace_action_target(state, context) {
+                state.selected = ws_idx;
+                if let Some(ws) = state.workspaces.get_mut(ws_idx) {
+                    ws.set_settled(!ws.is_settled());
+                }
+                state.mark_session_dirty();
+                leave_navigate_mode(state);
             }
         }
         NavigateAction::SwitchWorkspace(idx) => {
@@ -2334,13 +2366,15 @@ mod tests {
     }
 
     #[test]
-    fn navigate_down_follows_grouped_sidebar_visual_order() {
-        let mut state = state_with_workspaces(&["main", "normal", "issue"]);
-        mark_worktree_space_member(&mut state, 0, "repo-key");
-        mark_worktree_space_member(&mut state, 2, "repo-key");
+    #[test]
+    fn navigate_down_follows_session_recency_order() {
+        let mut state = state_with_workspaces(&["a", "b", "c"]);
+        state.workspaces[0].last_activity = Some(100);
+        state.workspaces[1].last_activity = Some(300);
+        state.workspaces[2].last_activity = Some(200);
         state.mode = Mode::Navigate;
-        state.active = Some(0);
-        state.selected = 0;
+        state.active = Some(1);
+        state.selected = 1;
 
         handle_navigate_key(
             &mut state,
@@ -2351,42 +2385,44 @@ mod tests {
     }
 
     #[test]
-    fn navigate_number_keys_follow_grouped_sidebar_visual_order() {
-        let mut state = state_with_workspaces(&["main", "normal", "issue"]);
-        mark_worktree_space_member(&mut state, 0, "repo-key");
-        mark_worktree_space_member(&mut state, 2, "repo-key");
+    fn navigate_number_keys_follow_session_recency_order() {
+        let mut state = state_with_workspaces(&["a", "b", "c"]);
+        state.workspaces[0].last_activity = Some(100);
+        state.workspaces[1].last_activity = Some(300);
+        state.workspaces[2].last_activity = Some(200);
         state.mode = Mode::Navigate;
-        state.active = Some(0);
-        state.selected = 0;
+        state.active = Some(1);
+        state.selected = 1;
 
         handle_navigate_key(
             &mut state,
-            KeyEvent::new(KeyCode::Char('2'), KeyModifiers::empty()),
+            KeyEvent::new(KeyCode::Char('3'), KeyModifiers::empty()),
         );
 
-        assert_eq!(state.active, Some(2));
-        assert_eq!(state.selected, 2);
+        assert_eq!(state.active, Some(0));
+        assert_eq!(state.selected, 0);
     }
 
     #[test]
-    fn indexed_switch_workspace_keybind_follows_grouped_sidebar_visual_order() {
-        let mut state = state_with_workspaces(&["main", "normal", "issue"]);
+    fn indexed_switch_workspace_keybind_follows_session_recency_order() {
+        let mut state = state_with_workspaces(&["a", "b", "c"]);
+        state.workspaces[0].last_activity = Some(100);
+        state.workspaces[1].last_activity = Some(300);
+        state.workspaces[2].last_activity = Some(200);
         let mut terminal_runtimes = TerminalRuntimeRegistry::new();
-        mark_worktree_space_member(&mut state, 0, "repo-key");
-        mark_worktree_space_member(&mut state, 2, "repo-key");
         state.mode = Mode::Prefix;
-        state.active = Some(0);
-        state.selected = 0;
+        state.active = Some(1);
+        state.selected = 1;
 
         execute_navigate_action_in_context(
             &mut state,
             &mut terminal_runtimes,
-            NavigateAction::SwitchWorkspace(1),
+            NavigateAction::SwitchWorkspace(2),
             ActionContext::Prefix,
         );
 
-        assert_eq!(state.active, Some(2));
-        assert_eq!(state.selected, 2);
+        assert_eq!(state.active, Some(0));
+        assert_eq!(state.selected, 0);
     }
 
     #[test]

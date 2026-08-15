@@ -227,6 +227,7 @@ const DEFAULT_CONFIG: &str = r##"# sessionr configuration
 # They are independent from focus_pane_*. Do not include prefix+, esc, enter, tab, or 1..9 here.
 # navigate_workspace_up = "up"
 # navigate_workspace_down = "down"
+# settle_session = "prefix+a"   # archive the selected session (Settled section)
 # navigate_pane_left = "h"      # left arrow always focuses the pane to the left
 # navigate_pane_down = "j"
 # navigate_pane_up = "k"
