@@ -854,6 +854,7 @@ impl App {
                             if let Some(worktree) = self.worktree_info_for_workspace(ws_idx) {
                                 self.emit_worktree_created_event(ws_idx, worktree);
                             }
+                            super::input::open_goal_workspace(&mut self.state, ws_idx);
                         }
                         Err(err) => {
                             self.state.config_diagnostic = Some(format!(
@@ -1883,6 +1884,68 @@ mod tests {
         );
         shutdown_test_runtimes(&mut app);
         let _ = std::fs::remove_dir_all(checkout);
+    }
+
+    #[tokio::test]
+    async fn worktree_create_finished_opens_goal_prompt_on_new_session() {
+        let repo = create_committed_repo("app-worktree-create-goal-prompt");
+        let worktree_root = unique_temp_path("app-worktree-create-goal-prompt-root");
+        let branch = "worktree/goal-prompt";
+        let checkout = crate::worktree::default_checkout_path(&worktree_root, "herdr", branch);
+        run_git(
+            &repo,
+            &[
+                "worktree",
+                "add",
+                "--quiet",
+                "-b",
+                branch,
+                checkout.to_str().unwrap(),
+                "HEAD",
+            ],
+        );
+
+        let mut app = app_for_worktree_tests();
+        app.state.workspaces = vec![crate::workspace::Workspace::test_new("source")];
+        let source_workspace_id = app.state.workspaces[0].id.clone();
+        let source_membership = crate::workspace::WorktreeSpaceMembership {
+            key: "repo-key".into(),
+            label: "herdr".into(),
+            repo_root: repo.clone(),
+            checkout_path: repo.clone(),
+            is_linked_worktree: false,
+        };
+        app.state.workspaces[0].worktree_space = Some(source_membership.clone());
+        app.state.worktree_create = Some(WorktreeCreateState {
+            source_workspace_id,
+            source_checkout_path: repo.clone(),
+            source_existing_membership: Some(source_membership),
+            source_repo_root: repo.clone(),
+            repo_key: "repo-key".into(),
+            repo_name: "herdr".into(),
+            branch: branch.into(),
+            checkout_path: checkout.clone(),
+            error: None,
+            creating: true,
+        });
+
+        app.handle_worktree_add_finished(WorktreeAddResult {
+            path: checkout.clone(),
+            api_request: None,
+            result: Ok(()),
+        });
+
+        assert_eq!(app.state.workspaces.len(), 2);
+        assert_eq!(app.state.mode, Mode::EditGoal);
+        assert_eq!(app.state.selected, 1);
+        assert!(app.state.name_input.is_empty());
+        assert!(app.state.pending_workspace_create_cwd.is_none());
+
+        shutdown_test_runtimes(&mut app);
+        let remove = crate::worktree::build_worktree_remove_command(&repo, &checkout, false);
+        crate::worktree::run_worktree_command(&remove).unwrap();
+        let _ = std::fs::remove_dir_all(worktree_root);
+        let _ = std::fs::remove_dir_all(repo);
     }
 
     #[test]

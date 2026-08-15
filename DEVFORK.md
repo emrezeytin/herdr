@@ -30,7 +30,7 @@ See DESIGN.md (product + sidebar spec) and mockup.html.
 2. [x] Data model: `goal`, `last_activity`, `settled` on Workspace + persistence + touch points
 3. [x] Sidebar v1: focused card + flat session list + marks + settled section
 4. [x] Repo on branch line, recency sort
-5. [ ] Worktree-first create flow (`session create --goal ... --worktree`)
+5. [x] Goal-first TUI create flow (new-session dialog = goal, prefix+u goal edit, goal prompt after worktree create)
 6. [ ] Collapsed mode, config tokens, docs
 
 ## Sync upstream

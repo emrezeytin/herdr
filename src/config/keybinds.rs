@@ -315,6 +315,7 @@ pub struct Keybinds {
     pub rename_workspace: ActionKeybinds,
     pub close_workspace: ActionKeybinds,
     pub settle_session: ActionKeybinds,
+    pub set_goal: ActionKeybinds,
     pub workspace_picker: ActionKeybinds,
     pub goto: ActionKeybinds,
     pub detach: ActionKeybinds,
@@ -483,6 +484,7 @@ impl Config {
             remove_worktree: empty_action!(),
             rename_workspace: empty_action!(),
             settle_session: empty_action!(),
+            set_goal: empty_action!(),
             close_workspace: empty_action!(),
             workspace_picker: empty_action!(),
             goto: empty_action!(),
@@ -612,6 +614,7 @@ impl Config {
             apply_action!(keybinds.remove_worktree, remove_worktree, source);
             apply_action!(keybinds.rename_workspace, rename_workspace, source);
             apply_action!(keybinds.settle_session, settle_session, source);
+            apply_action!(keybinds.set_goal, set_goal, source);
             apply_action!(keybinds.close_workspace, close_workspace, source);
             apply_action!(keybinds.workspace_picker, workspace_picker, source);
             apply_action!(keybinds.goto, goto, source);
@@ -1588,6 +1591,18 @@ next_tab = "prefix+n"
             binding_triggers(&kb.goto),
             vec![BindingTrigger::Prefix((
                 KeyCode::Char('g'),
+                KeyModifiers::empty()
+            ))]
+        );
+    }
+
+    #[test]
+    fn set_goal_defaults_to_prefix_u() {
+        let kb = Config::default().keybinds();
+        assert_eq!(
+            binding_triggers(&kb.set_goal),
+            vec![BindingTrigger::Prefix((
+                KeyCode::Char('u'),
                 KeyModifiers::empty()
             ))]
         );

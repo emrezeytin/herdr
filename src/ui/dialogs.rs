@@ -79,11 +79,12 @@ pub(super) fn render_rename_overlay(app: &AppState, frame: &mut Frame, area: Rec
     super::dim_background(frame, area);
 
     let title = match app.mode {
-        Mode::RenameWorkspace if app.pending_workspace_create_cwd.is_some() => "new workspace",
         Mode::RenameWorkspace => "rename workspace",
         Mode::RenameTab if app.creating_new_tab => "new tab",
         Mode::RenameTab => "rename tab",
         Mode::RenamePane => "rename pane",
+        Mode::EditGoal if app.pending_workspace_create_cwd.is_some() => "new session",
+        Mode::EditGoal => "session goal",
         _ => return,
     };
 
@@ -1065,7 +1066,12 @@ mod tests {
         let input = rename_input_rect(RENAME_AREA);
         let expected = Position::new(input.x + 3, input.y);
 
-        for mode in [Mode::RenameWorkspace, Mode::RenameTab, Mode::RenamePane] {
+        for mode in [
+            Mode::RenameWorkspace,
+            Mode::RenameTab,
+            Mode::RenamePane,
+            Mode::EditGoal,
+        ] {
             assert_eq!(
                 rename_overlay_caret_in(mode, "ab").0,
                 expected,

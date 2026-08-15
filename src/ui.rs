@@ -446,7 +446,7 @@ pub fn render_with_runtime_registry(
             render_context_menu(app, frame);
         }
         Mode::Settings => render_settings_overlay(app, frame, frame.area()),
-        Mode::RenameWorkspace | Mode::RenameTab | Mode::RenamePane => {
+        Mode::RenameWorkspace | Mode::RenameTab | Mode::RenamePane | Mode::EditGoal => {
             render_rename_overlay(app, frame, frame.area())
         }
         Mode::NewLinkedWorktree => render_new_linked_worktree_overlay(app, frame, frame.area()),
@@ -647,11 +647,11 @@ mod tests {
     }
 
     #[test]
-    fn workspace_creation_dialog_renders_new_workspace_title() {
+    fn session_creation_dialog_renders_new_session_title() {
         let mut app = crate::app::state::AppState::test_new();
-        app.mode = Mode::RenameWorkspace;
+        app.mode = Mode::EditGoal;
         app.pending_workspace_create_cwd = Some("/tmp/project".into());
-        app.name_input = "project".into();
+        app.name_input = "fix billing bug".into();
 
         let area = Rect::new(0, 0, 80, 20);
         compute_view(&mut app, area);
@@ -662,8 +662,8 @@ mod tests {
             .collect::<Vec<_>>()
             .join("\n");
 
-        assert!(screen.contains("new workspace"), "{screen}");
-        assert!(screen.contains("project"), "{screen}");
+        assert!(screen.contains("new session"), "{screen}");
+        assert!(screen.contains("fix billing bug"), "{screen}");
     }
 
     #[tokio::test]

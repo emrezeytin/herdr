@@ -1901,7 +1901,7 @@ impl App {
             Mode::Copy => {
                 self.handle_copy_mode_key(key);
             }
-            Mode::RenameWorkspace | Mode::RenameTab | Mode::RenamePane => {
+            Mode::RenameWorkspace | Mode::RenameTab | Mode::RenamePane | Mode::EditGoal => {
                 self.handle_rename_key_via_api(key_event);
             }
             Mode::NewLinkedWorktree => {
@@ -2218,6 +2218,7 @@ mod tests {
             Mode::RenameWorkspace,
             Mode::RenameTab,
             Mode::RenamePane,
+            Mode::EditGoal,
             Mode::NewLinkedWorktree,
             Mode::OpenExistingWorktree,
             Mode::Settings,
@@ -2779,7 +2780,7 @@ mod tests {
 
         app.begin_tui_workspace_create("test.workspace.create");
 
-        assert_eq!(app.state.mode, Mode::RenameWorkspace);
+        assert_eq!(app.state.mode, Mode::EditGoal);
         assert!(app.state.pending_workspace_create_cwd.is_some());
         assert!(!app.ensure_default_workspace());
         assert!(app.state.workspaces.is_empty());

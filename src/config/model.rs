@@ -356,6 +356,8 @@ pub struct KeysConfig {
     pub close_workspace: BindingConfig,
     /// Settle (archive) the selected session. Default: "prefix+a"
     pub settle_session: BindingConfig,
+    /// Edit the selected session's goal. Default: "prefix+u"
+    pub set_goal: BindingConfig,
     /// Open the workspace navigation surface. Default: "prefix+w"
     pub workspace_picker: BindingConfig,
     /// Open the session navigator. Default: "prefix+g"
@@ -490,6 +492,8 @@ pub(crate) struct KeysConfigOverlay {
     #[serde(skip_serializing_if = "Option::is_none")]
     settle_session: Option<BindingConfig>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    set_goal: Option<BindingConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     workspace_picker: Option<BindingConfig>,
     #[serde(skip_serializing_if = "Option::is_none")]
     goto: Option<BindingConfig>,
@@ -622,6 +626,7 @@ impl<'de> Deserialize<'de> for KeysConfig {
         apply_field!(rename_workspace);
         apply_field!(close_workspace);
         apply_field!(settle_session);
+        apply_field!(set_goal);
         apply_field!(workspace_picker);
         apply_field!(goto);
         apply_field!(navigate_workspace_up);
@@ -727,6 +732,7 @@ impl KeysConfig {
         copy_effective_action_field!(rename_workspace, keybinds.rename_workspace);
         copy_effective_action_field!(close_workspace, keybinds.close_workspace);
         copy_effective_action_field!(settle_session, keybinds.settle_session);
+        copy_effective_action_field!(set_goal, keybinds.set_goal);
         copy_effective_action_field!(workspace_picker, keybinds.workspace_picker);
         copy_effective_action_field!(goto, keybinds.goto);
         copy_effective_action_field!(navigate_workspace_up, keybinds.navigate.workspace_up);
@@ -1038,6 +1044,7 @@ impl Default for KeysConfig {
             rename_workspace: BindingConfig::one("prefix+shift+w"),
             close_workspace: BindingConfig::one("prefix+shift+d"),
             settle_session: BindingConfig::one("prefix+a"),
+            set_goal: BindingConfig::one("prefix+u"),
             workspace_picker: BindingConfig::one("prefix+w"),
             goto: BindingConfig::one("prefix+g"),
             navigate_workspace_up: BindingConfig::one("up"),

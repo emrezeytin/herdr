@@ -834,6 +834,7 @@ pub enum Mode {
     RenameWorkspace,
     RenameTab,
     RenamePane,
+    EditGoal,
     NewLinkedWorktree,
     OpenExistingWorktree,
     ConfirmRemoveWorktree,

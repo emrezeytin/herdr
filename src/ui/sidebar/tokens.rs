@@ -87,7 +87,7 @@ pub(super) fn agent_rows(
 }#[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::{AgentSidebarToken, SpaceSidebarToken};
+    use crate::config::AgentSidebarToken;
     use crate::detect::AgentState;
 
     fn entry() -> AgentPanelEntry {

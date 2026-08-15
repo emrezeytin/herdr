@@ -238,6 +238,11 @@ impl App {
                     leave_navigate_mode(&mut self.state);
                 }
             }
+            NavigateAction::SetGoal => {
+                if let Some(ws_idx) = workspace_action_target(&self.state, context) {
+                    super::modal::open_goal_workspace(&mut self.state, ws_idx);
+                }
+            }
             NavigateAction::SwitchWorkspace(idx) => {
                 if let Some(ws_idx) = self.state.workspace_at_visible_position(idx) {
                     self.focus_workspace_idx_via_api(ws_idx);
@@ -1407,6 +1412,7 @@ pub(crate) enum NavigateAction {
     RenameWorkspace,
     CloseWorkspace,
     SettleSession,
+    SetGoal,
     SwitchWorkspace(usize),
     SwitchTab(usize),
     FocusAgent(usize),
@@ -1559,6 +1565,7 @@ fn non_indexed_action_for_key(
         (&kb.rename_workspace, NavigateAction::RenameWorkspace),
         (&kb.close_workspace, NavigateAction::CloseWorkspace),
         (&kb.settle_session, NavigateAction::SettleSession),
+        (&kb.set_goal, NavigateAction::SetGoal),
         (&kb.previous_workspace, NavigateAction::PreviousWorkspace),
         (&kb.next_workspace, NavigateAction::NextWorkspace),
         (&kb.previous_agent, NavigateAction::PreviousAgent),
@@ -1718,6 +1725,11 @@ pub(super) fn execute_navigate_action_in_context(
                 }
                 state.mark_session_dirty();
                 leave_navigate_mode(state);
+            }
+        }
+        NavigateAction::SetGoal => {
+            if let Some(ws_idx) = workspace_action_target(state, context) {
+                super::modal::open_goal_workspace(state, ws_idx);
             }
         }
         NavigateAction::SwitchWorkspace(idx) => {
@@ -2191,6 +2203,44 @@ mod tests {
     }
 
     #[test]
+    fn prefix_u_key_opens_goal_modal_for_selected_session() {
+        let mut state = state_with_workspaces(&["main", "issue"]);
+        state.workspaces[1].goal = Some("ship sidebar".into());
+        state.mode = Mode::Navigate;
+        state.selected = 1;
+
+        handle_navigate_key(
+            &mut state,
+            KeyEvent::new(KeyCode::Char('u'), KeyModifiers::empty()),
+        );
+
+        assert_eq!(state.mode, Mode::EditGoal);
+        assert_eq!(state.selected, 1);
+        assert_eq!(state.name_input, "ship sidebar");
+    }
+
+    #[test]
+    fn prefix_set_goal_targets_active_workspace_and_opens_goal_modal() {
+        let mut state = state_with_workspaces(&["main", "issue"]);
+        let mut terminal_runtimes = TerminalRuntimeRegistry::new();
+        state.active = Some(1);
+        state.selected = 0;
+        state.workspaces[1].goal = Some("fix billing bug".into());
+        state.mode = Mode::Prefix;
+
+        execute_navigate_action_in_context(
+            &mut state,
+            &mut terminal_runtimes,
+            NavigateAction::SetGoal,
+            ActionContext::Prefix,
+        );
+
+        assert_eq!(state.mode, Mode::EditGoal);
+        assert_eq!(state.selected, 1);
+        assert_eq!(state.name_input, "fix billing bug");
+    }
+
+    #[test]
     fn prefix_close_workspace_targets_active_linked_worktree_without_removing_checkout() {
         let mut state = state_with_workspaces(&["main", "issue"]);
         let mut terminal_runtimes = TerminalRuntimeRegistry::new();
@@ -2234,10 +2284,9 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn new_workspace_key_opens_prefilled_prompt_and_preserves_captured_cwd() {
-        let cwd = unique_temp_path("workspace-name-suggestion");
+    async fn new_session_key_opens_goal_prompt_and_preserves_captured_cwd() {
+        let cwd = unique_temp_path("session-goal-prompt");
         std::fs::create_dir_all(&cwd).unwrap();
-        let suggested_name = crate::workspace::derive_label_from_cwd(&cwd);
         let mut app = app_with_test_workspaces(&["test"]);
         app.state.new_terminal_cwd =
             crate::config::NewTerminalCwdConfig::Path(cwd.display().to_string());
@@ -2247,9 +2296,9 @@ mod tests {
 
         app.handle_navigate_key(TerminalKey::new(KeyCode::Char('g'), KeyModifiers::empty()));
 
-        assert_eq!(app.state.mode, Mode::RenameWorkspace);
-        assert_eq!(app.state.name_input, suggested_name);
-        assert!(app.state.name_input_replace_on_type);
+        assert_eq!(app.state.mode, Mode::EditGoal);
+        assert!(app.state.name_input.is_empty());
+        assert!(!app.state.name_input_replace_on_type);
         assert_eq!(app.state.pending_workspace_create_cwd.as_ref(), Some(&cwd));
         assert_eq!(app.state.workspaces.len(), 1);
 
@@ -2260,6 +2309,7 @@ mod tests {
         assert_eq!(app.state.workspaces.len(), 2);
         assert_eq!(app.state.workspaces[1].identity_cwd, cwd);
         assert!(app.state.workspaces[1].custom_name.is_none());
+        assert!(app.state.workspaces[1].goal.is_none());
         assert!(app.state.pending_workspace_create_cwd.is_none());
         assert_eq!(app.state.mode, Mode::Terminal);
         crate::app::api::test_support::shutdown_test_runtimes(&mut app);
@@ -2267,8 +2317,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn new_workspace_prompt_saves_custom_name_atomically() {
-        let cwd = unique_temp_path("workspace-custom-name");
+    async fn new_session_prompt_saves_goal_atomically() {
+        let cwd = unique_temp_path("session-goal");
         std::fs::create_dir_all(&cwd).unwrap();
         let mut app = app_with_test_workspaces(&["test"]);
         app.state.new_terminal_cwd =
@@ -2277,11 +2327,15 @@ mod tests {
         app.state.mode = Mode::Navigate;
 
         app.execute_tui_navigate_action(NavigateAction::NewWorkspace, ActionContext::Navigate);
-        app.state.name_input = "  logs  ".into();
+        app.state.name_input = "  fix billing bug  ".into();
         app.handle_rename_key_via_api(KeyEvent::new(KeyCode::Enter, KeyModifiers::empty()));
 
         assert_eq!(app.state.workspaces.len(), 2);
-        assert_eq!(app.state.workspaces[1].custom_name.as_deref(), Some("logs"));
+        assert_eq!(
+            app.state.workspaces[1].goal.as_deref(),
+            Some("fix billing bug")
+        );
+        assert!(app.state.workspaces[1].custom_name.is_none());
         assert_eq!(app.state.workspaces[1].identity_cwd, cwd);
         crate::app::api::test_support::shutdown_test_runtimes(&mut app);
         let _ = std::fs::remove_dir_all(&cwd);

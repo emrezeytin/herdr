@@ -391,7 +391,7 @@ impl AppState {
 
                 if matches!(
                     self.mode,
-                    Mode::RenameWorkspace | Mode::RenameTab | Mode::RenamePane
+                    Mode::RenameWorkspace | Mode::RenameTab | Mode::RenamePane | Mode::EditGoal
                 ) {
                     let action = self
                         .rename_modal_inner()
@@ -4537,9 +4537,9 @@ mod tests {
             viewport.y + 1,
         ));
 
-        assert_eq!(app.state.mode, Mode::RenameWorkspace);
+        assert_eq!(app.state.mode, Mode::EditGoal);
         assert!(app.state.pending_workspace_create_cwd.is_some());
-        assert!(app.state.name_input_replace_on_type);
+        assert!(!app.state.name_input_replace_on_type);
         assert_eq!(app.state.workspaces.len(), 1);
     }
 
@@ -4560,9 +4560,9 @@ mod tests {
             new_workspace.y,
         ));
 
-        assert_eq!(app.state.mode, Mode::RenameWorkspace);
+        assert_eq!(app.state.mode, Mode::EditGoal);
         assert!(app.state.pending_workspace_create_cwd.is_some());
-        assert!(app.state.name_input_replace_on_type);
+        assert!(!app.state.name_input_replace_on_type);
         assert_eq!(app.state.workspaces.len(), 1);
     }
 

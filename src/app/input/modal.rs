@@ -381,15 +381,23 @@ pub(super) fn open_rename_workspace(
     state.mode = Mode::RenameWorkspace;
 }
 
+pub(crate) fn open_goal_workspace(state: &mut AppState, ws_idx: usize) {
+    state.pending_workspace_create_cwd = None;
+    state.selected = ws_idx;
+    state.rename_pane_target = None;
+    state.name_input = state.workspaces[ws_idx].goal.clone().unwrap_or_default();
+    state.name_input_replace_on_type = false;
+    state.mode = Mode::EditGoal;
+}
+
 pub(crate) fn open_new_workspace_dialog(state: &mut AppState, cwd: std::path::PathBuf) {
-    let suggested_name = crate::workspace::derive_label_from_cwd(&cwd);
     state.creating_new_tab = false;
     state.requested_new_tab_name = None;
     state.pending_workspace_create_cwd = Some(cwd);
     state.rename_pane_target = None;
-    state.name_input = suggested_name;
-    state.name_input_replace_on_type = true;
-    state.mode = Mode::RenameWorkspace;
+    state.name_input.clear();
+    state.name_input_replace_on_type = false;
+    state.mode = Mode::EditGoal;
 }
 
 pub(super) fn open_rename_active_tab(state: &mut AppState, replace_on_type: bool) {
@@ -423,11 +431,6 @@ pub(super) fn open_rename_pane(state: &mut AppState, pane_id: crate::layout::Pan
         .unwrap_or_default();
     state.name_input_replace_on_type = terminal.and_then(|t| t.manual_label.as_ref()).is_none();
     state.mode = Mode::RenamePane;
-}
-
-fn workspace_create_label(input: &str, suggested_name: &str) -> Option<String> {
-    let name = input.trim();
-    (!name.is_empty() && name != suggested_name).then(|| name.to_string())
 }
 
 fn next_new_tab_default_name(state: &AppState) -> String {
@@ -522,6 +525,14 @@ pub(super) fn apply_rename_action(state: &mut AppState, action: ModalAction) {
                     state.workspaces[state.selected].set_custom_name(new_name);
                     crate::logging::workspace_renamed(&workspace_id);
                     state.mark_session_dirty();
+                }
+                Mode::EditGoal if state.pending_workspace_create_cwd.is_none() => {
+                    if !new_name.is_empty() {
+                        if let Some(ws) = state.workspaces.get_mut(state.selected) {
+                            ws.goal = Some(new_name);
+                            state.mark_session_dirty();
+                        }
+                    }
                 }
                 Mode::RenameTab if state.creating_new_tab => {
                     state.request_new_tab = true;
@@ -1013,26 +1024,37 @@ impl App {
 
         match self.state.mode {
             Mode::RenameWorkspace => {
-                if let Some(cwd) = self.state.pending_workspace_create_cwd.take() {
-                    let suggested_name = crate::workspace::derive_label_from_cwd(&cwd);
-                    let label = workspace_create_label(&new_name, &suggested_name);
-                    self.runtime_workspace_create(
-                        "tui.workspace.create_named",
-                        crate::api::schema::WorkspaceCreateParams {
-                            cwd: Some(cwd.display().to_string()),
-                            focus: true,
-                            label,
-                            goal: None,
-                            env: Default::default(),
-                        },
-                    );
-                } else if !self.state.workspaces.is_empty() && !new_name.is_empty() {
+                if !self.state.workspaces.is_empty() && !new_name.is_empty() {
                     let workspace_id = self.public_workspace_id(self.state.selected);
                     self.runtime_workspace_rename(
                         "tui.workspace.rename",
                         crate::api::schema::WorkspaceRenameParams {
                             workspace_id,
                             label: new_name,
+                        },
+                    );
+                }
+            }
+            Mode::EditGoal => {
+                if let Some(cwd) = self.state.pending_workspace_create_cwd.take() {
+                    let goal = (!new_name.is_empty()).then(|| new_name.clone());
+                    self.runtime_workspace_create(
+                        "tui.workspace.create_named",
+                        crate::api::schema::WorkspaceCreateParams {
+                            cwd: Some(cwd.display().to_string()),
+                            focus: true,
+                            label: None,
+                            goal,
+                            env: Default::default(),
+                        },
+                    );
+                } else if !self.state.workspaces.is_empty() && !new_name.is_empty() {
+                    let workspace_id = self.public_workspace_id(self.state.selected);
+                    self.runtime_workspace_set_goal(
+                        "tui.workspace.set_goal",
+                        crate::api::schema::WorkspaceSetGoalParams {
+                            workspace_id,
+                            goal: new_name,
                         },
                     );
                 }
@@ -1451,17 +1473,6 @@ mod tests {
         app
     }
 
-    #[test]
-    fn workspace_create_label_preserves_auto_name_for_suggestion_or_blank() {
-        assert_eq!(workspace_create_label("project", "project"), None);
-        assert_eq!(workspace_create_label("", "project"), None);
-        assert_eq!(workspace_create_label("   ", "project"), None);
-        assert_eq!(
-            workspace_create_label("  logs  ", "project").as_deref(),
-            Some("logs")
-        );
-    }
-
     fn mark_worktree_space_member(state: &mut AppState, ws_idx: usize, key: &str) {
         state.workspaces[ws_idx].worktree_space = Some(crate::workspace::WorktreeSpaceMembership {
             key: key.into(),
@@ -1566,6 +1577,29 @@ mod tests {
 
         std::env::remove_var(crate::config::CONFIG_PATH_ENV_VAR);
         let _ = std::fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn goal_modal_round_trip_sets_session_goal() {
+        let mut state = state_with_workspaces(&["main", "issue"]);
+        state.active = Some(1);
+        state.selected = 1;
+        state.workspaces[1].goal = Some("old goal".into());
+
+        open_goal_workspace(&mut state, 1);
+        assert_eq!(state.mode, Mode::EditGoal);
+        assert_eq!(state.name_input, "old goal");
+
+        state.name_input = "  new goal  ".into();
+        state.name_input_replace_on_type = false;
+        handle_rename_key(
+            &mut state,
+            KeyEvent::new(KeyCode::Enter, KeyModifiers::empty()),
+        );
+
+        assert_eq!(state.mode, Mode::Terminal);
+        assert_eq!(state.workspaces[1].goal.as_deref(), Some("new goal"));
+        assert!(state.name_input.is_empty());
     }
 
     #[test]

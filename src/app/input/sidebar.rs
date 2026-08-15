@@ -1069,18 +1069,6 @@ mod tests {
         assert_eq!(app.state.workspaces[0].tabs[2].root_pane, moved_root);
         assert_eq!(app.state.workspaces[0].active_tab, 2);
     }
-
-    fn temp_git_repo(branch: &str) -> std::path::PathBuf {
-        let repo = unique_temp_path("sidebar-drop-slot-repo");
-        fs::create_dir_all(repo.join(".git")).unwrap();
-        fs::write(
-            repo.join(".git/HEAD"),
-            format!("ref: refs/heads/{branch}\n"),
-        )
-        .unwrap();
-        repo
-    }
-
     fn workspace_with_space(name: &str, key: &str) -> Workspace {
         let mut ws = Workspace::test_new(name);
         ws.worktree_space = Some(crate::workspace::WorktreeSpaceMembership {
