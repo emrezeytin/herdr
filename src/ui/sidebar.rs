@@ -941,9 +941,10 @@ fn render_workspace_list(
                 } else {
                     p.subtext0
                 };
-                let name_style = Style::default()
-                    .fg(name_color)
-                    .add_modifier(Modifier::BOLD);
+                let mut name_style = Style::default().fg(name_color);
+                if is_active || selected {
+                    name_style = name_style.add_modifier(Modifier::BOLD);
+                }
 
                 let name = ws.display_name_from(&app.terminals, terminal_runtimes);
                 let task = ws.goal.clone().unwrap_or(name.clone());
@@ -968,8 +969,14 @@ fn render_workspace_list(
                 let show_name_line = !is_settled && has_goal;
                 let branch_row = row_y
                     .saturating_add(u16::from(show_name_line) + 1);
-                let branch_style =
-                    Style::default().fg(if dim { p.surface_dim } else { p.overlay0 });
+                let branch_color = if dim {
+                    p.surface_dim
+                } else if is_active || selected {
+                    p.mauve
+                } else {
+                    p.overlay0
+                };
+                let branch_style = Style::default().fg(branch_color);
 
                 // Line 2: the session name, secondary to the task.
                 if show_name_line {
