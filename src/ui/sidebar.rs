@@ -161,16 +161,29 @@ pub(super) fn agent_panel_status_key(state: AgentState, seen: bool) -> &'static 
         (AgentState::Unknown, _) => "unknown",
     }
 }
-/// Every session renders as two rows: goal line + branch line.
-const SESSION_ROW_HEIGHT: u16 = 2;
-
+/// Session rows are variable-height, herdr-style:
+/// - settled: task + branch (1 line without a branch)
+/// - goal + branch: task / name / branch (3)
+/// - goal without branch: task / name (2)
+/// - no goal: name is the task, then branch (2, or 1 without a branch)
 fn workspace_row_height_in_body(
     _app: &AppState,
-    _workspace: &crate::workspace::Workspace,
+    workspace: &crate::workspace::Workspace,
     _indented: bool,
     body_height: u16,
 ) -> u16 {
-    SESSION_ROW_HEIGHT.min(body_height)
+    let has_branch = workspace.branch().is_some();
+    let has_goal = workspace.goal.is_some();
+    let rows = if workspace.is_settled() {
+        u16::from(has_branch) + 1
+    } else if has_goal && has_branch {
+        3
+    } else if has_goal || has_branch {
+        2
+    } else {
+        1
+    };
+    rows.min(body_height)
 }
 fn workspace_entry_gap(app: &AppState, entries: &[WorkspaceListEntry], entry_idx: usize) -> u16 {
     if entry_idx + 1 < entries.len() && !next_entry_is_indented_workspace(entries, entry_idx) {
@@ -932,12 +945,8 @@ fn render_workspace_list(
                     .fg(name_color)
                     .add_modifier(Modifier::BOLD);
 
-                let title = ws
-                    .goal
-                    .clone()
-                    .unwrap_or_else(|| {
-                        ws.display_name_from(&app.terminals, terminal_runtimes)
-                    });
+                let name = ws.display_name_from(&app.terminals, terminal_runtimes);
+                let task = ws.goal.clone().unwrap_or(name.clone());
                 let (agg_state, agg_seen) = ws.aggregate_state(&app.terminals);
                 let (mark, mark_style) = if is_settled {
                     ("·", Style::default().fg(p.overlay0))
@@ -945,30 +954,70 @@ fn render_workspace_list(
                     state_icon(agg_state, agg_seen, app.status_indicators, p)
                 };
 
-                // Herdr-style row: mark, name, nothing else. Recency drives the
-                // order; rows carry no relative-time column.
+                // Line 1: task (the goal), falling back to the name.
                 let mut line1 = vec![Span::raw(" "), Span::styled(mark, mark_style), Span::raw(" ")];
                 let title_width = body.width.saturating_sub(3) as usize;
-                line1.push(Span::styled(truncate_end(&title, title_width), name_style));
+                line1.push(Span::styled(truncate_end(&task, title_width), name_style));
                 frame.render_widget(
                     Paragraph::new(Line::from(line1)),
                     Rect::new(area.x, row_y, body.width, 1),
                 );
 
-                // Branch line mirrors herdr's spacing: three-space indent,
-                // bare branch name, no prefix glyph, no repo suffix.
-                let mut line2 = vec![Span::raw("   ")];
-                let branch_style = Style::default().fg(if dim { p.surface_dim } else { p.overlay0 });
-                if let Some(branch) = ws.branch() {
-                    line2.push(Span::styled(
-                        truncate_end(&branch, body.width.saturating_sub(3) as usize),
+                let branch = ws.branch();
+                let has_goal = ws.goal.is_some();
+                let show_name_line = !is_settled && has_goal;
+                let branch_row = row_y
+                    .saturating_add(u16::from(show_name_line) + 1);
+                let branch_style =
+                    Style::default().fg(if dim { p.surface_dim } else { p.overlay0 });
+
+                // Line 2: the session name, secondary to the task.
+                if show_name_line {
+                    let mut name_line = vec![Span::raw("   ")];
+                    name_line.push(Span::styled(
+                        truncate_end(&name, body.width.saturating_sub(3) as usize),
+                        Style::default().fg(if dim { p.surface_dim } else { p.overlay0 }),
+                    ));
+                    frame.render_widget(
+                        Paragraph::new(Line::from(name_line)),
+                        Rect::new(area.x, row_y + 1, body.width, 1),
+                    );
+                }
+
+                // Line 3 (or 2): bare branch at herdr's indent. Linked
+                // worktrees add a ⌂ marker with the repo name on the right.
+                if let Some(branch) = branch {
+                    let repo_suffix = (!is_settled)
+                        .then(|| {
+                            ws.worktree_space()
+                                .filter(|space| space.is_linked_worktree)
+                                .map(|space| format!("⌂ {}", space.label))
+                        })
+                        .flatten();
+                    let suffix_width = repo_suffix
+                        .as_deref()
+                        .map(display_width_u16)
+                        .unwrap_or(0);
+                    let branch_budget = body
+                        .width
+                        .saturating_sub(3 + suffix_width) as usize;
+                    let mut branch_line = vec![Span::raw("   ")];
+                    branch_line.push(Span::styled(
+                        truncate_end(&branch, branch_budget),
                         branch_style,
                     ));
+                    if let Some(suffix) = repo_suffix {
+                        let padding = body.width.saturating_sub(
+                            3 + display_width_u16(&branch) + suffix_width,
+                        );
+                        branch_line.push(Span::raw(" ".repeat(padding as usize)));
+                        branch_line.push(Span::styled(suffix, branch_style));
+                    }
+                    frame.render_widget(
+                        Paragraph::new(Line::from(branch_line)),
+                        Rect::new(area.x, branch_row, body.width, 1),
+                    );
                 }
-                frame.render_widget(
-                    Paragraph::new(Line::from(line2)),
-                    Rect::new(area.x, row_y + 1, body.width, 1),
-                );
                 card_i += 1;
             }
             WorkspaceListEntry::SettledHeader => {
@@ -1251,11 +1300,42 @@ mod tests {
             .expect("sidebar should render");
         let buffer = terminal.backend().buffer();
 
+        // Goal + branch: task / name / branch.
         let line1 = row_text(buffer, 2, area.width);
         assert!(line1.contains("fix billing bug"), "line1: {line1}");
         let line2 = row_text(buffer, 3, area.width);
-        assert!(line2.starts_with("   main"), "line2: {line2}");
-        assert!(!line2.contains("⎇"), "line2: {line2}");
+        assert!(line2.contains("repo-work"), "line2 (name): {line2}");
+        let line3 = row_text(buffer, 4, area.width);
+        assert!(line3.starts_with("   main"), "line3 (branch): {line3}");
+        assert!(!line3.contains("⌂"), "line3: {line3}");
+    }
+
+    #[test]
+    fn worktree_sessions_render_marker_and_repo_on_the_branch_line() {
+        let mut state = session_app(&[("bear", Some(now_unix_secs()), None)]);
+        state.workspaces[0].goal = Some("fix billing bug".into());
+        state.workspaces[0].cached_git_branch = Some("feature/x".into());
+        state.workspaces[0].worktree_space = Some(crate::workspace::WorktreeSpaceMembership {
+            key: "repo-key".into(),
+            label: "bear".into(),
+            repo_root: "/repo/bear".into(),
+            checkout_path: "/wt/bear/feature-x".into(),
+            is_linked_worktree: true,
+        });
+        state.active = None;
+        state.mode = Mode::Terminal;
+
+        let area = Rect::new(0, 0, 30, 12);
+        let mut terminal = Terminal::new(TestBackend::new(area.width, area.height))
+            .expect("test terminal should initialize");
+        terminal
+            .draw(|frame| render_sidebar(&state, &TerminalRuntimeRegistry::default(), frame, area))
+            .expect("sidebar should render");
+        let buffer = terminal.backend().buffer();
+
+        let line3 = row_text(buffer, 4, area.width);
+        assert!(line3.contains("feature/x"), "line3: {line3}");
+        assert!(line3.contains("⌂ bear"), "line3: {line3}");
     }
 
     #[test]

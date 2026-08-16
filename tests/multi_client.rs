@@ -863,9 +863,17 @@ fn non_foreground_client_render_preserves_agent_panel_scroll() {
     wait_for_file(&client_socket, Duration::from_secs(10));
 
     for index in 1..=23 {
-        let (_, pane_id) =
-            create_workspace_and_root_pane(&api_socket, &format!("agent-{index:02}"));
+        let label = format!("agent-{index:02}");
+        let (workspace_id, pane_id) = create_workspace_and_root_pane(&api_socket, &label);
         report_idle_agent(&api_socket, &pane_id);
+        // Sessions with goals render as 3-line rows; recency keeps creation
+        // order, so the list scrolls the same way for every session.
+        send_json_request(
+            &api_socket,
+            &format!(
+                "{{\"id\":\"set_goal_{index}\",\"method\":\"workspace.set_goal\",\"params\":{{\"workspace_id\":\"{workspace_id}\",\"goal\":\"{label}\"}}}}"
+            ),
+        );
     }
 
     let mut setup_client = connect_raw_client(&client_socket, 106, 40);
